@@ -14,6 +14,12 @@ from .brief import Brief
 
 SEVERITY_BLOCK = "bloqueante"
 SEVERITY_WARN = "aviso"
+# Nota informativa sobre lo que el sistema NO ha podido medir. No es un defecto
+# de la pagina y no debe contar contra ella: sin esta distincion, la primera
+# pagina de cualquier lote nunca podria ser "publicable tal cual", porque
+# arrastra el aviso de que aun no hay corpus con el que comparar. La metrica que
+# se vende tiene que medir la pagina, no la cobertura del sistema.
+SEVERITY_NOTE = "nota"
 
 # Densidad maxima de la keyword primaria. Por encima es relleno y lo detecta
 # cualquier revisor, humano o algoritmico.
@@ -101,14 +107,22 @@ class GateResult:
         return not self.blocking
 
     @property
+    def notes(self) -> list[GateFinding]:
+        return [f for f in self.findings if f.severity == SEVERITY_NOTE]
+
+    @property
+    def warnings(self) -> list[GateFinding]:
+        return [f for f in self.findings if f.severity == SEVERITY_WARN]
+
+    @property
     def publishable_as_is(self) -> bool:
-        """Sin bloqueantes y sin avisos. Es la metrica que se vende.
+        """Sin bloqueantes y sin avisos. Las notas no cuentan.
 
         La linea base del competidor, medida por un tercero, es 52,4% de
         articulos publicables tal cual. Esta propiedad es como se cuenta la
         nuestra, y hay que medirla a ciegas para que valga algo.
         """
-        return not self.findings
+        return not self.blocking and not self.warnings
 
     def add(self, code: str, severity: str, message: str,
             samples: list[str] | None = None) -> None:
@@ -248,7 +262,7 @@ def check(
     else:
         result.add(
             "solape_no_comprobado",
-            SEVERITY_WARN,
+            SEVERITY_NOTE,
             "Sin corpus de paginas publicadas: el solape interno no se ha "
             "comprobado. No se afirma lo que no se mide.",
         )

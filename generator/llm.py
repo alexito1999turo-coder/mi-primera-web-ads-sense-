@@ -45,12 +45,19 @@ class Call:
 
 @dataclass
 class ScriptedLLM:
-    """Modelo falso que devuelve respuestas preparadas, en orden.
+    """Modelo falso. Con esto el pipeline se verifica sin clave y sin gastar.
 
-    Con esto el pipeline entero se verifica sin clave y sin gastar.
+    Tres modos, por precedencia:
+
+    - `routes`: la clave que aparezca en el prompt decide la respuesta. Es el
+      modo correcto para un lote, porque el orden global de llamadas se
+      desalinea en cuanto una pagina necesita reparacion.
+    - `responses`: por orden de llamada. Vale para una sola pagina.
+    - `fallback`: lo demas.
     """
 
     responses: list[str] = field(default_factory=list)
+    routes: dict[str, str] = field(default_factory=dict)
     calls: list[Call] = field(default_factory=list)
     fallback: str = ""
 
@@ -64,6 +71,11 @@ class ScriptedLLM:
         self.calls.append(
             Call(system=system, prompt=prompt, effort=effort, max_tokens=max_tokens)
         )
+        # La clave mas larga primero: una clave corta puede estar contenida en
+        # otra mas especifica y robarle la respuesta.
+        for key in sorted(self.routes, key=len, reverse=True):
+            if key in prompt:
+                return self.routes[key]
         index = len(self.calls) - 1
         if index < len(self.responses):
             return self.responses[index]
