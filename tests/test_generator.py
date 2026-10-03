@@ -31,11 +31,19 @@ def brief_completo(page=None, **extra) -> Brief:
 
 
 def cuerpo_bueno() -> str:
+    # Dos frases citables, no una: cifra exacta, ano y metodo en la misma frase,
+    # debajo de un encabezado en forma de pregunta y en primera posicion. Es lo
+    # que pide la compuerta de citabilidad, y es como se escribe de verdad una
+    # pagina que un modelo pueda citar.
     return (
         "# Coste de un sistema septico aerobico\n\n"
-        "## Cuanto cuesta la instalacion completa\n\n"
-        "El coste medio de instalacion es de 14.200 $, media de 40 presupuestos "
-        f"reales de 2026. La referencia oficial esta en [la guia de la EPA]({FUENTE}).\n\n"
+        "## Cuanto cuesta la instalacion completa?\n\n"
+        "La instalacion completa costo 14.200 $ de mediana en Texas en 2026, "
+        "sobre una muestra propia de 40 presupuestos reales. El marco oficial "
+        f"esta en [la guia de la EPA]({FUENTE}).\n\n"
+        "## Cuanto anade el permiso del condado?\n\n"
+        "El permiso del condado anadio 612 $ de media en 2026 en esa misma "
+        f"muestra de 40 presupuestos, contrastado con [la guia de la EPA]({FUENTE}).\n\n"
         + RELLENO
     )
 

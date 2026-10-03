@@ -100,17 +100,18 @@ def cuerpo(brief, indice: int, minimo: int = 1300) -> str:
         secciones += [
             f"## {pregunta}",
             "",
-            f"Respuesta directa: {dato} segun nuestra muestra, y el {palabras[2]} "
-            f"es el factor que mas lo mueve. La referencia oficial sigue siendo "
+            f"La cifra medida fue {dato} de mediana en 2026, sobre una muestra "
+            f"propia de 40 casos, y el {palabras[2]} es el factor que mas la "
+            f"mueve. La referencia oficial sigue siendo "
             f"[la guia de la EPA]({FUENTE}).",
             "",
         ]
     # Nombrar las secundarias: el brief las pide cubiertas.
     for keyword in brief.page.secondary:
         secciones += [
-            f"Sobre {keyword.term}, la respuesta es la misma cifra con otro "
-            f"nombre: {dato}, contrastada con "
-            f"[la guia de la EPA]({FUENTE}).",
+            f"Para {keyword.term} la mediana medida en 2026 fue igualmente "
+            f"{dato} sobre esa misma muestra propia de 40 casos, contrastada "
+            f"con [la guia de la EPA]({FUENTE}).",
             "",
         ]
     secciones.append(" ".join(frases))
@@ -137,8 +138,14 @@ class TestDePuntaAPunta(unittest.TestCase):
                         Source(url=FUENTE, title="EPA", consulted_at="2026-10-03")
                     ],
                     own_data=[
-                        OwnData(label=f"Medicion {index}", value=f"{index}.400 $",
-                                method="muestra propia 2026")
+                        OwnData(
+                            label=f"Medicion {index}",
+                            # Cifra precisa, no redonda: una cifra redondeada la
+                            # tiene el modelo en su propio peso y no necesita
+                            # citarnos. La compuerta de citabilidad lo exige.
+                            value=f"1{index}.2{index}7 $",
+                            method="muestra propia de 40 casos en 2026",
+                        )
                     ],
                     brand_voice="Directo, cifras antes que adjetivos",
                 )

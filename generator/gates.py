@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from citability.score import analyse as analyse_citability
+
 from .brief import Brief
 
 SEVERITY_BLOCK = "bloqueante"
@@ -267,7 +269,38 @@ def check(
             "comprobado. No se afirma lo que no se mide.",
         )
 
-    # 7. Preguntas del brief sin contestar (aviso: lo juzga el revisor).
+    # 7. Citabilidad: el dato esta, pero esta redactado de forma que un modelo
+    #    no lo puede levantar.
+    #
+    #    Bloquea solo cuando el brief SI trae dato propio y la pagina no tiene
+    #    ni una frase citable: eso no es una preferencia de estilo, es que se
+    #    pago por un dato exclusivo y se escribio de forma que no se puede
+    #    atribuir. Si no hay dato propio ya hay un bloqueante por eso.
+    #
+    #    Lo demas es aviso, porque los pesos del scorer son priores sin
+    #    calibrar y bloquear sobre una heuristica no medida seria deshonesto.
+    citability = analyse_citability(draft.body)
+    if usable and not citability.liftable:
+        fixes = [fix for fix, _count in citability.top_fixes(3)]
+        result.add(
+            "sin_frase_citable",
+            SEVERITY_BLOCK,
+            f"Ninguna frase es citable (citabilidad {citability.score}/100). El "
+            "dato propio esta en la pagina pero redactado de forma que un modelo "
+            "no lo puede levantar ni atribuir.",
+            fixes,
+        )
+    elif len(citability.liftable) < 2:
+        result.add(
+            "citabilidad_pobre",
+            SEVERITY_WARN,
+            f"Solo {len(citability.liftable)} frase(s) citable(s) "
+            f"(citabilidad {citability.score}/100). Cuantas mas frases "
+            "atribuibles, mas superficie para ser citado.",
+            [fix for fix, _count in citability.top_fixes(3)],
+        )
+
+    # 8. Preguntas del brief sin contestar (aviso: lo juzga el revisor).
     body_lower = draft.body.lower()
     sin_contestar = [
         q for q in brief.questions
@@ -281,7 +314,7 @@ def check(
             sin_contestar[:5],
         )
 
-    # 8. Secundarias ausentes.
+    # 9. Secundarias ausentes.
     ausentes = [
         k.term for k in brief.page.secondary if k.term.lower() not in body_lower
     ]

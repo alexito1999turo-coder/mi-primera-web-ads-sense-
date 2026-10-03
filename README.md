@@ -31,10 +31,50 @@ abuse*: la restricción de riesgo y la ventaja de producto son la misma decisió
 | **M4** | `generator/` | Briefs con dato propio obligatorio, ocho compuertas duras, bucle de reparación |
 | **M5** | `publisher/` | WordPress REST, JSON-LD, enlazado pilar↔satélite. Borrador por defecto |
 | **M8** | `review/` | Triaje de revisión humana y registro de rechazos que vuelve al brief |
+| **M8b** | `calibration/` | Mide las propias compuertas contra el criterio del revisor |
 | **M9** | `compliance/` | Dossier mensual mapeado contra la política, huella de similitud de cartera |
+| **M3** | `insight/` | Oportunidad descontada por AI Overviews y reasignación de clusters |
+| **M7a** | `citability/` | Qué frases puede citar un buscador, y qué le falta a las demás |
 
-Pendientes: M3 planificador adaptativo con datos de Search Console, M6
-autoridad sin esquema de enlaces, M7 volante de citaciones.
+Pendiente: M6 autoridad sin esquema de enlaces (es más negocio que código).
+
+## Las tres cosas que la competencia no hace
+
+**Ingeniería de citabilidad** (`citability/`). Ellos *rastrean* citaciones en
+ChatGPT, Perplexity, Gemini y Claude. Eso es un termómetro: dice lo que ya pasó.
+Este módulo invierte el problema — un modelo no cita páginas, cita **frases** que
+puede levantar enteras, atribuir a alguien y que no encuentra en otras cincuenta
+fuentes. De ahí salen cuatro factores medibles sobre el texto, y la salida útil
+no es una nota: es la lista de frases que un modelo levantaría, y el arreglo
+concreto que le falta a cada una de las demás.
+
+La señal más discriminante es la más simple: **un número redondo es consenso, un
+número preciso es una medición.** "Unos 14.000 $" ya lo sabe el modelo y no
+necesita citarte; "14.237 $" solo puede venir de quien lo contó.
+
+**Calibración de las propias compuertas** (`calibration/`). Las compuertas son
+heurísticas escritas por alguien. Una que marca páginas que el revisor luego
+aprueba consume minutos para nada y entrena al revisor a ignorarla; lo que el
+revisor rechaza sin que ninguna compuerta avisara es una compuerta que falta.
+Este módulo convierte el veredicto humano en verdad de referencia y recomienda
+subir, bajar, crear o retirar cada una — con el límite inferior de Wilson, porque
+3 aciertos de 3 es 0,44 y no 1,00, y por debajo del tamaño mínimo dice "muestra
+insuficiente" en vez de inventar un número.
+
+Y dice en voz alta el problema metodológico que nadie menciona: **una compuerta
+bloqueante impide que la página llegue al revisor, así que su precisión es
+inmedible** sin revisar a propósito una muestra de lo que bloquea.
+
+**Oportunidad por valor, no por clics** (`insight/`). El SEO clásico dice que la
+zona de oportunidad es la posición 11-30. Pero subir de la 12 a la 5 en una
+consulta informacional vale mucho menos que el mismo salto en una comercial,
+porque la AI Overview se queda el clic.
+
+Comprobado con números, y por eso está en una prueba: **el descuento por AI
+Overviews solo casi nunca da la vuelta al orden** — una informacional de 10.000
+impresiones sigue ganando a una comercial de 2.200 aunque le quites la mitad del
+clic. Lo que sí lo invierte es el descuento *más* el valor del clic: por clics
+gana la informacional de 10.000; por valor, la transaccional de 900.
 
 ## Las siete prohibiciones
 
@@ -65,6 +105,12 @@ python3 -m auditor https://ejemplo.com --impressions gsc.csv --out informe.md
 # M2: keywords -> clusters -> plan mensual
 python3 -m clusters keywords.csv --cap 24 --out plan.md --strict
 
+# M7a: qué frases puede citar un buscador de este texto
+python3 -m citability articulo.md --min-score 60
+
+# M3: oportunidad real y reasignación de clusters
+python3 -m insight gsc-actual.csv --before gsc-anterior.csv --keywords kw.csv --pages 12
+
 # Pruebas
 python3 -m unittest discover -s tests -t .
 ```
@@ -90,6 +136,16 @@ y la comercial vende. Antes las dos piezas se contradecían.
 comprobado" porque todavía no hay nada con lo que comparar. Si eso contara como
 defecto, ninguna primera página podría ser "publicable tal cual" y la métrica de
 venta mediría la cobertura del sistema en vez de la calidad de la página.
+
+**La extraibilidad multiplica, no suma.** Lo tenía mal: con la extraibilidad
+como un sumando más, una frase imposible de levantar pero perfectamente atribuida
+y exclusiva salía citable. Una condición necesaria no se promedia con las
+deseables. Lo destapó una prueba que escribí esperando que pasara.
+
+**Los tokens del nicho no agrupan.** Y en citabilidad, `entre` solo aproxima
+cuando va delante de una cifra: "entre 300 y 900 $" es una horquilla, pero
+"recogidos entre enero y junio" es un rango exacto. Sin esa distinción se
+penalizaba la frase mejor atribuida del texto.
 
 **Recategorizar antes que ocultar.** Cuando un archivo fino tiene artículos
 huérfanos reasignables, M1 los detecta por solape de términos y recomienda
@@ -134,3 +190,18 @@ un fixture escrito para pasar las compuertas. **No es evidencia de calidad del
 producto**, y usarlo para vender sería exactamente lo que se le critica a la
 competencia. La cifra que vale hay que medirla a ciegas, con rúbrica escrita
 antes de generar, sobre contenido real.
+
+Y tres cosas son **priores declarados, no mediciones**, cada una en su propio
+módulo para que se vean y se puedan sustituir:
+
+- Los pesos de citabilidad (`citability/score.py`). Salen de cómo funciona la
+  generación con recuperación, no de un experimento. Se calibran cuando haya
+  citaciones reales medidas.
+- La curva de CTR por posición y la exposición a AI Overviews
+  (`insight/curves.py`). Son de mercado. Con ocho semanas de datos propios se
+  calculan con ellos.
+- El valor relativo del clic por intención (`insight/curves.py`). Es un prior de
+  nicho de servicios; se sustituye por los datos de conversión del cliente.
+
+Que estén aislados no es casualidad: el día que haya datos, se cambian ahí y
+todo lo demás sigue funcionando igual.

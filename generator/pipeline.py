@@ -37,7 +37,25 @@ Reglas que no se negocian:
 6. Contestas las preguntas del brief de forma directa y en las primeras lineas
    de su seccion. Nada de preambulos.
 7. No escribes conclusiones que resuman lo ya dicho. Cierras con lo que el
-   lector tiene que hacer a continuacion."""
+   lector tiene que hacer a continuacion.
+
+## Como se escribe una frase que un buscador pueda citar
+
+Un modelo no cita paginas: cita frases que puede levantar enteras, atribuir a
+alguien, y que no encuentra en otras cincuenta fuentes. Asi que cada dato
+importante va en una frase que cumple las cuatro cosas a la vez:
+
+- **Se sostiene sola.** Nombra su sujeto. "Este cuesta 14.237 $" no se puede
+  citar porque fuera del parrafo nadie sabe que es "este". Entre ocho y
+  cuarenta y cinco palabras: menos no dice nada, mas no cabe en una respuesta.
+- **Lleva quien, cuando y como.** Cifra, ano y metodo en la misma frase:
+  "costo 14.237 $ de mediana en Texas en 2026, sobre una muestra de 40
+  presupuestos".
+- **Da la cifra exacta, no la redonda.** "Unos 14.000 $" ya lo sabe el modelo y
+  no necesita citarte; "14.237 $" solo puede venir de quien lo midio. Y acota:
+  donde, cuando, bajo que condicion.
+- **Va primera.** Debajo de un encabezado en forma de pregunta, la respuesta en
+  la primera frase de la seccion. Ahi es donde se busca."""
 
 
 @dataclass
