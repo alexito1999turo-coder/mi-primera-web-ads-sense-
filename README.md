@@ -182,8 +182,19 @@ calidad de 2,1/5 es una decisión, no un límite de coste.
 
 ## Lo que todavía no se puede afirmar
 
-El sistema **no se ha ejecutado nunca contra un sitio real ni contra la API**.
-Está verificado de punta a punta con dobles de prueba, sin red y sin clave.
+El sistema **no se ha ejecutado contra un sitio en producción ni contra la API
+del modelo**. Lo que sí está hecho:
+
+- El auditor y el publicador pasan por **HTTP real** contra el WordPress del
+  banco de pruebas: gzip, charset, redirecciones, marcado de tema, 401 real, y
+  actualizar en vez de duplicar.
+- El cliente del modelo está **verificado contra el SDK 1.11.0 instalado**: los
+  seis parámetros que usa, el método del stream y los campos de respuesta
+  (`stop_reason`, `stop_details`) existen todos, y la forma de la petición de
+  lote valida contra los tipos del SDK.
+
+Lo que falta es una clave de API, un WordPress en producción y ocho semanas de
+Search Console.
 
 En particular: el 100% de publicables tal cual del test de integración es sobre
 un fixture escrito para pasar las compuertas. **No es evidencia de calidad del

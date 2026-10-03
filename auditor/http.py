@@ -48,13 +48,32 @@ class Response:
 
     @property
     def redirected(self) -> bool:
-        return self.final_url.rstrip("/") != self.url.rstrip("/")
+        return self.final_url != self.url
+
+    @property
+    def redirect_kind(self) -> str:
+        """Que clase de redireccion hubo.
+
+        Importa la distincion. Antes se comparaban las URL sin sus barras
+        finales para evitar ruido, y con eso no se detectaba nunca la
+        redireccion mas comun de WordPress: la que anade la barra. Una
+        redireccion de barra es benigna y conviene decirla; una a otra ruta es
+        un hallazgo, porque significa que la URL del sitemap no es la que se
+        sirve.
+        """
+        if not self.redirected:
+            return ""
+        if self.final_url.rstrip("/") == self.url.rstrip("/"):
+            return "barra final"
+        return "otra ruta"
 
     def summary(self) -> str:
         """Linea de verificacion dura para el informe."""
         if self.error:
             return f"{self.url} -> ERROR {self.error} ({self.consulted_at})"
-        extra = f" -> {self.final_url}" if self.redirected else ""
+        extra = (
+            f" -> {self.final_url} ({self.redirect_kind})" if self.redirected else ""
+        )
         return (
             f"{self.url} -> HTTP {self.status}{extra} "
             f"[{self.content_type}] {self.elapsed_ms}ms ({self.consulted_at})"

@@ -121,7 +121,8 @@ def judge(archive: Archive, thin_words: int = THIN_WORDS) -> Archive:
             # Honestidad en la cifra: los candidatos no bastan por si solos.
             gap = needed - available
             tail = (
-                f"Hay {_plural(available, 'candidato')} reasignable, pero el umbral "
+                f"Hay {_plural(available, 'candidato')} "
+                f"{'reasignable' if available == 1 else 'reasignables'}, pero el umbral "
                 f"de hub pide {needed}: reasignarlos deja el archivo a "
                 f"{_plural(gap, 'articulo')} de ser un hub real. Mientras tanto "
                 "sigue siendo fino."

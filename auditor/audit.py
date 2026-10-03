@@ -183,6 +183,11 @@ def run(
             in_sitemap=True,
             verification=response.summary(),
         )
+        if response.redirect_kind == "otra ruta":
+            audit.warnings.append(
+                f"{url} redirige a {response.final_url}: la URL que declara el "
+                "sitemap no es la que se sirve. Corregir el sitemap o el destino."
+            )
         archive.recategorization_candidates = _candidates(
             url, listed, post_tokens
         )

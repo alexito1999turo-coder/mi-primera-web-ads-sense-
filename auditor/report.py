@@ -29,7 +29,9 @@ def to_markdown(audit: Audit) -> str:
     pending = audit.actionable
     add("## Resumen")
     add("")
-    add(f"- Archivos indexables medidos: **{len(audit.archives)}**")
+    indexables = [a for a in audit.archives if a.indexable]
+    add(f"- Archivos medidos: **{len(audit.archives)}**, de los cuales "
+        f"**{len(indexables)}** son indexables")
     add(f"- Archivos con accion pendiente: **{len(pending)}**")
     add(f"- Articulos declarados en sitemap: **{audit.post_count}**")
     if audit.intent_distribution:
@@ -43,15 +45,24 @@ def to_markdown(audit: Audit) -> str:
     add("")
 
     # --- Archivos --------------------------------------------------------
-    add("## Archivos indexables")
+    add("## Archivos declarados en sitemap")
     add("")
     if audit.archives:
-        add("| Archivo | Tipo | HTTP | Posts | Palabras | Veredicto | Accion |")
-        add("|---|---|---|---|---|---|---|")
+        # La columna de indexable no es decoracion: un archivo fino que ya esta
+        # en noindex no es un problema abierto, y llamarlo "indexable" en el
+        # informe de un cliente es decirle que tiene un problema que no tiene.
+        add("| Archivo | Tipo | HTTP | Indexable | Posts | Palabras | Veredicto | Accion |")
+        add("|---|---|---|---|---|---|---|---|")
         for a in sorted(audit.archives, key=lambda x: (x.priority or 9, -x.words)):
-            add(f"| {a.url} | {a.kind} | {a.status} | {a.posts} | {a.words} "
-                f"| {a.verdict} | {ACTION_LABEL.get(a.action, '—')} |")
+            indexable = "si" if a.indexable else "no (noindex)"
+            add(f"| {a.url} | {a.kind} | {a.status} | {indexable} | {a.posts} "
+                f"| {a.words} | {a.verdict} | {ACTION_LABEL.get(a.action, '—')} |")
         add("")
+        ya_resueltos = [a for a in audit.archives if not a.indexable]
+        if ya_resueltos:
+            add(f"{len(ya_resueltos)} archivo(s) ya estan en noindex y no compiten: "
+                + ", ".join(a.url for a in ya_resueltos))
+            add("")
     else:
         add("No se encontraron archivos de autor, categoria o etiqueta en los "
             "sitemaps declarados.")
