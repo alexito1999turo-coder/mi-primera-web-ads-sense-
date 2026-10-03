@@ -96,7 +96,28 @@ No son opiniones: están implementadas como compuertas que bloquean.
    bloquea. Es la guarda contra el quinto patrón, el que mata el negocio entero
    de golpe en vez de cliente a cliente.
 
-## Uso
+## La aplicación
+
+```bash
+python3 -m webapp
+# → http://127.0.0.1:8000
+```
+
+Cuatro herramientas en el navegador, sin instalar nada y sin enviar datos a
+ningún sitio: **auditoría** de un dominio en vivo con barra de progreso,
+**citabilidad** de un texto, **oportunidad** desde una exportación de Search
+Console y **plan de clusters** desde un CSV de keywords.
+
+Hasta aquí esto eran diez paquetes y una batería de pruebas: un motor, no un
+producto. Su producto se usa sin tocar código; el mío no se podía usar. Esta es
+la carcasa que faltaba.
+
+Se ata a `127.0.0.1` a propósito, y rechaza auditar direcciones internas
+(`192.168.*`, `10.*`, `localhost`, el endpoint de metadatos) salvo que pases
+`--allow-private`. Sin ese guardia, la herramienta sería un escáner de la red
+de quien la levanta.
+
+## Uso por línea de comandos
 
 ```bash
 # M1: auditar un sitio en vivo
