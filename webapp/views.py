@@ -39,6 +39,7 @@ h1 small{display:block;font-size:13px;font-weight:400;color:var(--soft);
 h2{margin:0 0 4px;font-size:18px}
 h3{margin:0 0 6px;font-size:15px}
 p{margin:0 0 12px}
+a{color:var(--signal)}
 .m{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .note{font-size:13px;color:var(--faint);max-width:72ch}
 nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px}
@@ -526,6 +527,8 @@ BODY = """
   <h1>Banco de pruebas SEO-GEO
     <small>Auditoria, citabilidad, oportunidad y plan de clusters. Corre en tu
     maquina, sin dependencias y sin enviar nada a ningun sitio.</small></h1>
+  <p class="note" style="margin-top:9px"><a href="/oferta">Qué se vende, y
+  cuánto cuesta</a> · los tres planes, y lo que está medido y lo que no.</p>
 </header>
 
 <nav class="tabs" role="tablist">

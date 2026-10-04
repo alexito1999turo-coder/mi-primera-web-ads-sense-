@@ -7,7 +7,7 @@ advertencia al final.
 Referente a batir: BabyLoveGrowth.ai. Se le copia la ingeniería y el modelo
 comercial; se rechazan sus tres pasivos.
 
-**Python 3.11+, cero dependencias.** Solo librería estándar. 185 pruebas,
+**Python 3.11+, cero dependencias.** Solo librería estándar. 460 pruebas,
 ninguna toca la red.
 
 ## La tesis
@@ -29,13 +29,14 @@ abuse*: la restricción de riesgo y la ventaja de producto son la misma decisió
 | **M1** | `auditor/` | Archivos indexables finos, canibalización archivo-vs-artículo, canonicals duplicados, distribución de intención |
 | **M2** | `clusters/` | Grafo de clusters con solape cero, plan mensual con tope |
 | **M4** | `generator/` | Briefs con dato propio obligatorio, ocho compuertas duras, bucle de reparación |
-| **M5** | `publisher/` | WordPress REST, JSON-LD, enlazado pilar↔satélite. Borrador por defecto |
+| **M5** | `publisher/` | WordPress REST y Admin API de Shopify, JSON-LD, enlazado pilar↔satélite. Borrador por defecto |
 | **M8** | `review/` | Triaje de revisión humana y registro de rechazos que vuelve al brief |
 | **M8b** | `calibration/` | Mide las propias compuertas contra el criterio del revisor |
 | **M9** | `compliance/` | Dossier mensual mapeado contra la política, huella de similitud de cartera |
 | **M3** | `insight/` | Oportunidad descontada por AI Overviews y reasignación de clusters |
 | **M7a** | `citability/` | Qué frases puede citar un buscador, y qué le falta a las demás |
 | **M6a** | `dataset/` | Datos propios con procedencia: el activo enlazable que sustituye a la red de enlaces |
+| **M11** | `prospeccion/` | Una lista de dominios → un informe de auditoría por marca listo para enviar, y tres líneas para el cuerpo del correo |
 
 ## Las tres cosas que la competencia no hace
 
@@ -111,6 +112,44 @@ No son opiniones: están implementadas como compuertas que bloquean.
    bloquea. Es la guarda contra el quinto patrón, el que mata el negocio entero
    de golpe en vez de cliente a cliente.
 
+## La oferta
+
+Tres planes, y el eje que los separa es uno solo: cuántas páginas al mes pasan
+la compuerta editorial. No hay niveles de "soporte prioritario".
+
+| Plan | Precio | Páginas/mes | Qué añade sobre el anterior |
+|---|---|---|---|
+| **Esencial** | 490 €/mes | 4 | Auditoría del sitio, plan de clusters, generación con dato propio obligatorio y publicación en borrador |
+| **Crecimiento** | 890 €/mes | 8 | Motor de citabilidad sobre cada página y un dato propio con procedencia al mes, que es el activo enlazable |
+| **Completo** | 1.490 €/mes | hasta 16 | Dossier mensual de cumplimiento y huella de similitud contra el resto de la cartera |
+
+El precio por página baja de 122 € a 93 € al subir de plan, y esa es toda la
+razón de que haya tres: el trabajo que no escala con el volumen (la auditoría,
+el grafo de clusters, la calibración de las compuertas) ya está pagado en el
+primer plan.
+
+**Y no hay un plan por encima.** El tope de 24 páginas al mes por sitio es la
+prohibición 6, y es una decisión comercial antes que una línea de código:
+`MONTHLY_CAP = 24` en `clusters/validate.py` es el valor por defecto del
+planificador, lo que pasa de ahí sale marcado como aviso y el plan se reparte en
+varios meses en vez de publicarse de golpe. Quien se baje el repositorio puede
+subirlo con `--cap`; lo que no existe es un plan que lo venda. Y no existe por
+dos motivos, no por postura: el coste dominante es el revisor humano a 25-35
+minutos por artículo (ver *Economía*) y el volumen es justo la señal de *scaled
+content abuse*. Cobrar por 120 páginas al mes sería cobrar por el riesgo del
+cliente.
+
+**La auditoría gratuita es la vía de captación, y no por generosidad.** Es
+específica de quien la recibe (mide su dominio, y cada afirmación lleva detrás
+un código HTTP con su hora de consulta) y el motor ya la produce: no hay que
+construir nada nuevo para darla, solo traducirla al idioma de quien firma la
+factura. Eso es `prospeccion/`. Con la regla que la hace creíble: si la
+auditoría no encuentra nada, el resumen lo dice y convierte eso en el argumento,
+en vez de inventar un problema que la marca puede comprobar en diez minutos.
+
+Los tres precios son una **decisión de posicionamiento, no una medición**:
+todavía no hay ningún cliente que los haya pagado.
+
 ## La aplicación
 
 ```bash
@@ -146,6 +185,9 @@ python3 -m citability articulo.md --min-score 60
 
 # M3: oportunidad real y reasignación de clusters
 python3 -m insight gsc-actual.csv --before gsc-anterior.csv --keywords kw.csv --pages 12
+
+# M11: una lista de dominios -> una carpeta de informes listos para enviar
+python3 -m prospeccion dominios.txt --out informes/
 
 # Pruebas
 python3 -m unittest discover -s tests -t .
@@ -221,16 +263,20 @@ calidad de 2,1/5 es una decisión, no un límite de coste.
 El sistema **no se ha ejecutado contra un sitio en producción ni contra la API
 del modelo**. Lo que sí está hecho:
 
-- El auditor y el publicador pasan por **HTTP real** contra el WordPress del
-  banco de pruebas: gzip, charset, redirecciones, marcado de tema, 401 real, y
-  actualizar en vez de duplicar.
+- El auditor y el publicador de WordPress pasan por **HTTP real** contra el
+  WordPress del banco de pruebas: gzip, charset, redirecciones, marcado de tema,
+  401 real, y actualizar en vez de duplicar.
+- El camino de Shopify **no** pasa por HTTP real: el banco de pruebas
+  (`harness/`) simula WordPress, no una tienda. De ese publicador se comprueba el
+  contrato con el transporte inyectado; el comportamiento de la API Admin contra
+  una tienda de verdad no está medido.
 - El cliente del modelo está **verificado contra el SDK 1.11.0 instalado**: los
   seis parámetros que usa, el método del stream y los campos de respuesta
   (`stop_reason`, `stop_details`) existen todos, y la forma de la petición de
   lote valida contra los tipos del SDK.
 
-Lo que falta es una clave de API, un WordPress en producción y ocho semanas de
-Search Console.
+Lo que falta es una clave de API, un WordPress en producción, una tienda de
+Shopify y ocho semanas de Search Console.
 
 En particular: el 100% de publicables tal cual del test de integración es sobre
 un fixture escrito para pasar las compuertas. **No es evidencia de calidad del

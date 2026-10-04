@@ -120,3 +120,30 @@ class TestSitioQueNoResponde(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestContadorDePeticiones(unittest.TestCase):
+    """El contador que se publica es el de ESTA auditoria, no el del cliente.
+
+    `prospeccion` comparte un cliente entre todos los dominios de un lote para
+    espaciar las peticiones de verdad. Si la auditoria copiase el contador
+    absoluto, el segundo dominio declararia en la primera linea de su informe
+    las peticiones del primero. Esa cifra se la lee la marca auditada.
+    """
+
+    def test_una_auditoria_sola_cuenta_sus_peticiones(self):
+        client = FakeClient(routes())
+        audit = run(SITE, client=client)
+        self.assertEqual(audit.requests_made, client.request_count)
+        self.assertGreater(audit.requests_made, 0)
+
+    def test_con_cliente_compartido_cada_auditoria_cuenta_la_suya(self):
+        client = FakeClient(routes())
+        primera = run(SITE, client=client)
+        segunda = run(SITE, client=client)
+
+        self.assertEqual(segunda.requests_made, primera.requests_made)
+        self.assertEqual(
+            client.request_count,
+            primera.requests_made + segunda.requests_made,
+        )

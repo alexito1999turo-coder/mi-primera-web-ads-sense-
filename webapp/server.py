@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 
 from . import api
 from .jobs import STATE_FAILED, STATE_RUNNING, Registry
+from .offer import page as offer_page
 from .views import page
 
 MAX_BODY = 8_000_000
@@ -82,6 +83,9 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/", "/index.html"):
             self._send(200, page().encode("utf-8"), "text/html; charset=utf-8")
             return
+        if path == "/oferta":
+            self._send(200, offer_page().encode("utf-8"), "text/html; charset=utf-8")
+            return
         if path == "/salud":
             self._json(200, {"ok": True, "version": "0.1.0"})
             return
@@ -145,7 +149,8 @@ def serve(port: int = 8000, allow_private: bool = False) -> None:
     servidor = build(port=port, allow_private=allow_private)
     direccion = f"http://127.0.0.1:{servidor.server_address[1]}"
     print(f"\n  Banco de pruebas SEO-GEO en {direccion}")
-    print("  Auditoria, citabilidad, oportunidad y clusters. Ctrl-C para parar.\n")
+    print("  Auditoria, citabilidad, oportunidad y clusters. Ctrl-C para parar.")
+    print(f"  Que se vende y cuanto cuesta: {direccion}/oferta\n")
     try:
         servidor.serve_forever()
     except KeyboardInterrupt:

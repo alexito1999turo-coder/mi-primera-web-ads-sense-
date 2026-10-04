@@ -110,6 +110,11 @@ def run(
     site = site if site.startswith("http") else f"https://{site}"
     root = f"{urlparse(site).scheme}://{urlparse(site).netloc}"
     client = client or Client()
+    # El contador del cliente es acumulado y el cliente se puede compartir entre
+    # auditorias (lo hace prospeccion para espaciar un lote entero). Lo que mide
+    # ESTA auditoria es el delta desde aqui: guardar el absoluto le atribuiria al
+    # tercer dominio las peticiones de los dos anteriores, y esa cifra se publica.
+    opening_requests = client.request_count
     audit = Audit(site=root, started_at=_now())
 
     impressions: dict[str, int] = {}
@@ -205,7 +210,7 @@ def run(
         )
 
     audit.warnings.extend(rules_mod.network_guard(audit.archives))
-    audit.requests_made = client.request_count
+    audit.requests_made = client.request_count - opening_requests
     audit.finished_at = _now()
     return audit
 
