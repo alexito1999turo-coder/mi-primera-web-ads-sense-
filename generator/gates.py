@@ -134,23 +134,54 @@ class GateResult:
         )
 
 
-def unsupported_claims(draft: Draft) -> list[str]:
-    """Frases con cifra o superlativo sin enlace que las respalde.
+# Una afirmacion tambien esta respaldada cuando declara SU PROPIO metodo.
+#
+# Lo descubrio un experimento con un articulo real: la compuerta marcaba trece
+# frases, y la mayoria eran mediciones propias con su metodo en la misma frase
+# ("sobre una muestra propia de 30 presupuestos"). Exigirles un enlace externo
+# penalizaba exactamente el contenido que este sistema existe para producir, y
+# confundia dos cosas distintas: tener fuente y tener enlace. El dato propio es
+# su propia fuente, siempre que diga como se obtuvo.
+OWN_METHOD = re.compile(
+    r"\b(?:muestra propia|de nuestra|de nuestro|segun nuestr|según nuestr|"
+    r"nuestra muestra|nuestro registro|medimos|recogimos|entrevistamos|"
+    r"analizamos|pedimos presupuesto|mediana de \d|media de \d|promedio de \d|"
+    r"sobre \d[\d.,]* (?:presupuestos|casos|observaciones|respuestas|muestras))\b",
+    re.I,
+)
 
-    Regla: la frase misma, o la siguiente, debe contener un enlace. Permitir la
-    siguiente evita falsos positivos del patron normal de escritura, donde el
-    dato va en una frase y la fuente en la de al lado.
+
+def unsupported_claims(draft: Draft) -> list[str]:
+    """Frases con cifra o superlativo que nada respalda.
+
+    Una afirmacion esta respaldada cuando su PARRAFO contiene un enlace a una
+    fuente, o cuando la propia frase declara el metodo con el que se obtuvo el
+    dato.
+
+    Dos decisiones, las dos salidas de medir la regla contra un articulo real:
+
+    - La ventana es el parrafo, no la frase y la siguiente. La gente escribe el
+      dato en una frase y la fuente dos frases despues; exigir adyacencia
+      marcaba prosa correcta.
+    - El metodo propio cuenta como respaldo. Un dato medido por uno mismo, con
+      el metodo dicho, no necesita enlazar a nadie: enlazar a otro seria
+      atribuirle un dato que no es suyo.
     """
-    sentences = draft.sentences()
     offenders: list[str] = []
-    for index, sentence in enumerate(sentences):
-        if not any(pattern.search(sentence) for pattern in CLAIM_PATTERNS):
+    for paragraph in draft.body.split("\n\n"):
+        if not paragraph.strip():
             continue
-        window = sentence
-        if index + 1 < len(sentences):
-            window += " " + sentences[index + 1]
-        if not MARKDOWN_LINK.search(window):
-            offenders.append(sentence.strip()[:180])
+        tiene_enlace = bool(MARKDOWN_LINK.search(paragraph))
+        texto = " ".join(paragraph.split())
+        for sentence in SENTENCE_SPLIT.split(texto):
+            sentence = sentence.strip()
+            if not sentence or sentence.startswith("#"):
+                continue
+            if not any(pattern.search(sentence) for pattern in CLAIM_PATTERNS):
+                continue
+            if tiene_enlace or OWN_METHOD.search(sentence):
+                continue
+            offenders.append(sentence[:180])
     return offenders
 
 
