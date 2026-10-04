@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from textos import plural
+from textos import lista, plural
 
 MEDIDO = "medido"
 ESTIMADO = "estimado"
@@ -294,6 +294,19 @@ def _revision(store) -> Section:
     return seccion
 
 
+def _para_desbancar(peso: int, medidas: int, umbral: float = 0.34) -> int:
+    """Cuantas observaciones mas hacen falta para que el dato pese mas que el prior.
+
+    El encogimiento es peso/(peso+n). Para bajar de `umbral` hace falta
+    n > peso*(1-umbral)/umbral. Decir el numero convierte «sigue siendo
+    suposicion» en algo accionable: se sabe cuanto queda.
+    """
+    import math
+
+    necesarias = math.ceil(peso * (1 - umbral) / umbral)
+    return max(necesarias - medidas, 1)
+
+
 def _incognitas(store, portfolio, record, prior_sets) -> list[str]:
     """Lo que NO se sabe. Generado, no escrito.
 
@@ -332,18 +345,46 @@ def _incognitas(store, portfolio, record, prior_sets) -> list[str]:
                 f"de las {MIN_OBSERVACIONES} que hacen falta"
             )
 
+    # Una metrica puede estar MEDIDA y aun asi no mandar.
+    #
+    # Son dos cosas distintas y el informe las ensenaba como si fueran la
+    # misma: arriba decia «ctr_posicion_1: 0,205 (medido), 6 observaciones» y
+    # abajo «no es todavia una medicion». Las dos frases eran ciertas — una
+    # habla de la media observada y la otra del valor que el sistema usa para
+    # planificar, que sigue apoyado en el prior — pero juntas se leen como que
+    # el informe se contradice, que es justo lo que no se puede permitir.
+    #
+    # Ahora se distinguen: si hay muestra suficiente, la media es una
+    # medicion y lo que falta es que PESE.
+    mandan_el_prior: dict[str, str] = {}
     for conjunto in (prior_sets or []):
         for post in conjunto.report():
             if post.trustworthy:
                 continue
-            por_metrica.setdefault(post.prior.name, []).append(
-                f"{post.prior_share}% sigue siendo el prior declarado "
-                f"({conjunto.label})"
-            )
+            medidas = len(store.observations(post.prior.name,
+                                             source=ORIGEN_MEDIDO))
+            if medidas >= MIN_OBSERVACIONES:
+                faltan = _para_desbancar(post.prior.weight, medidas)
+                mandan_el_prior[post.prior.name] = (
+                    f"«{post.prior.name}» ya esta medida ({medidas} "
+                    f"observaciones, media {post.observed_mean}), pero la cifra "
+                    f"que el sistema usa para planificar sigue siendo "
+                    f"{post.prior_share}% el prior declarado "
+                    f"({conjunto.label}): hacen falta unas "
+                    f"{plural(faltan, 'observacion', 'observaciones')} mas para "
+                    "que mande el dato."
+                )
+            else:
+                por_metrica.setdefault(post.prior.name, []).append(
+                    f"{post.prior_share}% sigue siendo el prior declarado "
+                    f"({conjunto.label})"
+                )
 
     for nombre in sorted(por_metrica):
         fuera.append(f"«{nombre}» no es todavia una medicion: "
                      + "; ".join(por_metrica[nombre]) + ".")
+    for nombre in sorted(mandan_el_prior):
+        fuera.append(mandan_el_prior[nombre])
 
     if record.max_density is None:
         fuera.append(
@@ -360,7 +401,7 @@ def _incognitas(store, portfolio, record, prior_sets) -> list[str]:
     if idiomas:
         fuera.append(
             "Publicado en "
-            + ", ".join(sorted(idiomas))
+            + lista([f"«{i}»" for i in sorted(idiomas)])
             + " sin revision nativa registrada: no podemos afirmar que no sea "
             "traduccion automatica a ojos de la politica."
         )

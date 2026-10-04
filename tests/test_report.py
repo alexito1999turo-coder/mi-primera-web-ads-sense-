@@ -201,6 +201,58 @@ class TestInforme(unittest.TestCase):
         self.assertIn("no medida", huella.value)
 
 
+    def test_una_metrica_medida_que_aun_no_manda_no_parece_contradiccion(self):
+        """Regresion: el informe decia «medido» arriba y «no es medicion» abajo.
+
+        Las dos frases eran ciertas — la media observada frente al valor que
+        el sistema usa para planificar — pero juntas se leen como que el
+        informe se contradice, que es lo que no se puede permitir.
+        """
+        self.llenar(2)
+        for _ in range(MIN_OBSERVACIONES + 1):
+            self.store.observe("ctr_posicion_1", 0.2)
+        priores = PriorSet(label="Curvas")
+        priores.declare("ctr_posicion_1", 0.25, weight=PESO_MEDIO)
+        self.store.feed(priores)
+        informe = build(self.store, record(), self.cartera, prior_sets=[priores])
+
+        cifra = [f for f in informe.figures if f.label == "ctr_posicion_1"][0]
+        self.assertEqual(cifra.provenance, MEDIDO)
+
+        menciones = [u for u in informe.unknowns if "ctr_posicion_1" in u]
+        self.assertEqual(len(menciones), 1)
+        self.assertIn("ya esta medida", menciones[0])
+        self.assertIn("para planificar", menciones[0])
+        self.assertNotIn("no es todavia una medicion", menciones[0])
+
+    def test_dice_cuantas_observaciones_faltan_para_que_mande_el_dato(self):
+        """«Sigue siendo suposicion» no es accionable; un numero si."""
+        self.llenar(2)
+        for _ in range(MIN_OBSERVACIONES + 1):
+            self.store.observe("ctr_posicion_1", 0.2)
+        priores = PriorSet(label="Curvas")
+        priores.declare("ctr_posicion_1", 0.25, weight=PESO_MEDIO)
+        self.store.feed(priores)
+        informe = build(self.store, record(), self.cartera, prior_sets=[priores])
+        mencion = [u for u in informe.unknowns if "ctr_posicion_1" in u][0]
+        import re
+
+        numeros = re.findall(r"unas (\d+) observaciones mas", mencion)
+        self.assertTrue(numeros, f"no dice cuantas faltan: {mencion}")
+        self.assertGreater(int(numeros[0]), 0)
+
+    def test_los_codigos_de_idioma_van_entrecomillados(self):
+        """«Publicado en en» se lee como una errata, no como un idioma."""
+        self.llenar(2)
+        informe = build(self.store,
+                        record(languages=["es", "en"],
+                               languages_human_reviewed=["es"]),
+                        self.cartera)
+        mencion = [u for u in informe.unknowns if "traduccion automatica" in u][0]
+        self.assertIn("«en»", mencion)
+        self.assertNotIn("en en ", mencion)
+
+
 class TestCabecera(unittest.TestCase):
     def test_informe_vacio_no_divide_por_cero(self):
         vacio = MonthlyReport(client="x", period="2026-10")
