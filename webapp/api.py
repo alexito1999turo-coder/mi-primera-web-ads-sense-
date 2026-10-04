@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import re
 from dataclasses import asdict
+from pathlib import Path
 from urllib.parse import urlparse
 
 from auditor.audit import run as run_audit
@@ -313,4 +315,190 @@ def clusters(csv_text: str, cap: int) -> dict:
             }
             for month in sorted(plan.months)
         ],
+    }
+
+
+# -- memoria ---------------------------------------------------------------
+#
+# El almacen vive en un directorio por cliente, y el nombre del cliente llega
+# del formulario. Eso convierte un campo de texto en un nombre de ruta, que es
+# el agujero clasico: `../../.ssh` como nombre de cliente escribiria fuera. Se
+# valida con lista blanca, no filtrando lo malo: filtrar lo malo deja siempre
+# una codificacion que no se penso.
+CLIENTE_VALIDO = re.compile(r"^[a-z0-9][a-z0-9._-]{0,62}$")
+METRICA_VALIDA = re.compile(r"^[a-z0-9][a-z0-9_@.-]{0,62}$")
+MAX_OBSERVACION = 1e12
+
+
+def datos_root() -> Path:
+    """Donde vive el almacen. Se puede mover con BANCO_DATOS."""
+    return Path(os.environ.get("BANCO_DATOS", "datos")).resolve()
+
+
+def normalize_client(raw: str) -> str:
+    cliente = (raw or "").strip().lower()
+    if not cliente:
+        raise BadRequest("Falta el cliente.")
+    if not CLIENTE_VALIDO.match(cliente):
+        raise BadRequest(
+            "El cliente solo puede llevar minusculas, numeros, punto, guion y "
+            "guion bajo, y empezar por letra o numero."
+        )
+    if cliente in (".", "..") or cliente.startswith("."):
+        raise BadRequest("Ese nombre de cliente no es valido.")
+    return cliente
+
+
+def _store(cliente: str):
+    from store.project import ProjectStore
+    raiz = datos_root()
+    destino = (raiz / cliente).resolve()
+    # Cinturon y tirantes: aunque la lista blanca ya lo impide, se comprueba
+    # que la ruta final sigue dentro. Una defensa de frontera que depende de
+    # una sola comprobacion es una defensa que se rompe al refactorizar.
+    if raiz not in destino.parents and destino != raiz:
+        raise BadRequest("Ruta de cliente fuera del almacen.")
+    return ProjectStore(destino, client=cliente)
+
+
+def _portfolio():
+    from store.portfolio import PortfolioStore
+    return PortfolioStore(datos_root())
+
+
+def memory_state(cliente: str) -> dict:
+    """Que sabe el sistema de este cliente, y que sigue siendo suposicion."""
+    from store.project import MEDIDO as MEDIDO_
+
+    almacen = _store(cliente)
+    metricas = almacen.metrics()
+    huella = almacen.fingerprint()
+    log = almacen.rejection_log()
+    return {
+        "cliente": cliente,
+        "resumen": almacen.describe(),
+        "paginas": [
+            {"slug": p.slug, "palabras": p.words, "rol": p.role,
+             "url": p.url, "guardada": p.at,
+             "fragmentos": p.sketch.size, "exacta": p.sketch.exact}
+            for p in sorted(almacen.pages.values(), key=lambda x: x.slug)
+        ],
+        "huella": {"hashes": len(huella.hashes), "fragmentos": huella.size,
+                   "estimada": not huella.exact},
+        # La media se calcula SOLO sobre lo medido. El panel se titulaba «lo
+        # que el sistema ha medido» y promediaba tambien lo declarado, que es
+        # exactamente la mezcla que el resto del sistema evita. Se vio al
+        # mirar la pagina renderizada, no en ningun test.
+        "metricas": [
+            {"nombre": n, "observaciones": c,
+             "medidas": len(almacen.observations(n, source=MEDIDO_)),
+             "declaradas": c - len(almacen.observations(n, source=MEDIDO_)),
+             "media": (round(sum(almacen.observations(n, source=MEDIDO_))
+                             / len(almacen.observations(n, source=MEDIDO_)), 4)
+                       if almacen.observations(n, source=MEDIDO_) else None)}
+            for n, c in metricas.items()
+        ],
+        "rechazos": {
+            "total": len(log.rejections),
+            "taxonomia": log.taxonomy(),
+            "al_brief": log.brief_additions(),
+            "tendencia": log.minutes_trend(),
+        },
+        "migraciones": almacen.migrations,
+    }
+
+
+def memory_check(cliente: str, text: str) -> dict:
+    """Comprueba un borrador contra el sitio y contra la cartera.
+
+    Se comprueba ANTES de publicar a proposito. Auditar la cartera despues
+    encuentra el problema cuando ya esta indexado.
+    """
+    cuerpo = (text or "").strip()
+    if not cuerpo:
+        raise BadRequest("No hay texto que comprobar.")
+    if len(cuerpo) > MAX_TEXT:
+        raise BadRequest("El texto es demasiado largo.")
+
+    almacen = _store(cliente)
+    solape = almacen.overlap_of(cuerpo)
+    riesgos = _portfolio().would_collide(cliente, cuerpo)
+    return {
+        "cliente": cliente,
+        "sitio": {
+            "medido": solape.measured,
+            "comparadas": solape.compared,
+            "valor": solape.value,
+            "contra": solape.slug,
+            "estimado": solape.estimated,
+            "lectura": solape.describe(),
+        },
+        "cartera": [
+            {"otro": c.site_b, "frases": c.phrase_similarity,
+             "esqueleto": c.outline_similarity, "bloquea": c.blocking,
+             "lectura": c.describe()}
+            for c in riesgos[:5]
+        ],
+        "bloquea": any(c.blocking for c in riesgos),
+    }
+
+
+def memory_record(cliente: str, slug: str, text: str, url: str = "",
+                  role: str = "") -> dict:
+    """Guarda una pagina publicada. Devuelve el solape QUE TENIA antes."""
+    cuerpo = (text or "").strip()
+    if not cuerpo:
+        raise BadRequest("No hay texto que guardar.")
+    if len(cuerpo) > MAX_TEXT:
+        raise BadRequest("El texto es demasiado largo.")
+    limpio = (slug or "").strip().lower()
+    if not CLIENTE_VALIDO.match(limpio):
+        raise BadRequest("El slug solo puede llevar minusculas, numeros, "
+                         "punto, guion y guion bajo.")
+
+    almacen = _store(cliente)
+    antes = almacen.overlap_of(cuerpo, skip=limpio)
+    pagina = almacen.record_page(limpio, cuerpo, url=url.strip()[:300],
+                                 role=role.strip()[:40])
+    cartera = _portfolio()
+    cartera.add_page(cliente, cuerpo)
+    return {
+        "guardada": {"slug": pagina.slug, "palabras": pagina.words,
+                     "fragmentos": pagina.sketch.size},
+        "solape_previo": {"valor": antes.value, "contra": antes.slug,
+                          "medido": antes.measured, "lectura": antes.describe()},
+        "paginas": len(almacen.pages),
+        "cartera": cartera.describe(),
+    }
+
+
+def memory_observe(cliente: str, metrica: str, valor, fuente: str = "medido",
+                   nota: str = "") -> dict:
+    """Anade una observacion al historico. Es lo que apaga los priores."""
+    from store.project import DECLARADO, MEDIDO
+
+    nombre = (metrica or "").strip().lower()
+    if not METRICA_VALIDA.match(nombre):
+        raise BadRequest("Nombre de metrica no valido.")
+    try:
+        numero = float(valor)
+    except (TypeError, ValueError):
+        raise BadRequest("El valor de la observacion tiene que ser un numero.") from None
+    if numero != numero or abs(numero) in (float("inf"),) or abs(numero) > MAX_OBSERVACION:
+        raise BadRequest("Ese valor no es un numero utilizable.")
+    origen = (fuente or MEDIDO).strip().lower()
+    if origen not in (MEDIDO, DECLARADO):
+        raise BadRequest(f"La fuente solo puede ser «{MEDIDO}» o «{DECLARADO}».")
+
+    almacen = _store(cliente)
+    obs = almacen.observe(nombre, numero, source=origen, note=nota.strip()[:400])
+    vigentes = almacen.observations(nombre)
+    medidas = almacen.observations(nombre, source=MEDIDO)
+    return {
+        "guardada": obs.to_dict(),
+        "vigentes": len(vigentes),
+        "medidas": len(medidas),
+        "aviso": ("" if origen == MEDIDO else
+                  "Marcada como declarada: NO alimenta los priores. Solo lo "
+                  "medido puede apagar una suposicion."),
     }

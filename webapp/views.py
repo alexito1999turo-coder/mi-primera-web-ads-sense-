@@ -7,6 +7,8 @@ el JS en el propio documento.
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 STYLE = """
 :root{
   --ground:#f3f4f6; --panel:#fff; --edge:#d7dbe2; --ink:#171c26;
@@ -75,6 +77,8 @@ button.ghost[aria-pressed="true"]{background:var(--signal-bg);
 .bar i{display:block;height:100%;background:var(--signal);width:0;
   transition:width .3s ease}
 .err{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);
+  padding:10px 13px;border-radius:6px;font-size:14px;margin-top:12px}
+.ok{background:var(--good-bg);border:1px solid var(--good);color:var(--good);
   padding:10px 13px;border-radius:6px;font-size:14px;margin-top:12px}
 .tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
   margin-bottom:14px}
@@ -478,6 +482,162 @@ async function medirClusters(){
   finally{ boton.disabled = false; }
 }
 
+/* --- 5. memoria -------------------------------------------------------
+ *
+ * Esta pestana es la unica del banco que escribe en disco. Las otras cuatro
+ * miden y se olvidan; esta acumula, y por eso es la que hace que el sistema
+ * mejore con el uso en vez de repetir el mismo trabajo cada mes.
+ */
+function cliente(){ return ($("#mem-cliente").value || "").trim().toLowerCase(); }
+
+async function verMemoria(){
+  var c = cliente();
+  if (!c){ fallo("#mem-out", new Error("Escribe un nombre de cliente.")); return; }
+  try {
+    var r = await fetch("/api/memoria?cliente=" + encodeURIComponent(c));
+    var d = await r.json();
+    if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
+    pintarMemoria(d);
+  } catch(e){ fallo("#mem-out", e); }
+}
+
+function pintarMemoria(d){
+  var obs = d.metricas.reduce(function(a,m){ return a + m.medidas; }, 0);
+  var h = '<div class="tiles">' +
+    tile(d.paginas.length, "paginas en el corpus") +
+    tile(obs, "observaciones medidas") +
+    tile(d.rechazos.total, "rechazos registrados") +
+    tile(d.rechazos.al_brief.length, "instrucciones al brief") +
+    "</div>";
+
+  h += '<div class="panel"><h3>Huella del sitio</h3><p class="note">' +
+    sp(d.huella.hashes) + " hashes sobre " + sp(d.huella.fragmentos) +
+    " fragmentos" + (d.huella.estimada ? " (estimado)" : " (exacto)") +
+    ". El almacen no guarda ni una frase del contenido: solo hashes." +
+    "</p></div>";
+
+  if (d.migraciones && d.migraciones.length){
+    h += '<div class="panel"><h3>Migrado al abrir</h3><p class="note m">' +
+      esc(d.migraciones.join(", ")) + "</p></div>";
+  }
+
+  if (d.paginas.length){
+    h += '<div class="panel"><h3>Paginas que cuentan para el solape</h3>' +
+      '<div class="scroll"><table><thead><tr><th>Slug</th><th>Rol</th>' +
+      '<th class="n">Palabras</th><th class="n">Fragmentos</th>' +
+      '<th>Firma</th><th>Guardada</th></tr></thead><tbody>';
+    d.paginas.forEach(function(p){
+      h += "<tr><td>" + esc(p.slug) + "</td><td>" + esc(p.rol || "—") +
+        '</td><td class="n">' + sp(p.palabras) + '</td><td class="n">' +
+        sp(p.fragmentos) + "</td><td>" + (p.exacta ? "exacta" : "estimada") +
+        '</td><td class="m">' + esc((p.guardada || "").slice(0,16)) +
+        "</td></tr>";
+    });
+    h += "</tbody></table></div></div>";
+  } else {
+    h += '<div class="panel"><h3>Corpus vacio</h3><p class="note">Sin ninguna ' +
+      "pagina guardada, la compuerta de solape no puede comprobar nada y lo " +
+      "dice en el informe en vez de dar la pagina por limpia.</p></div>";
+  }
+
+  if (d.metricas.length){
+    h += '<div class="panel"><h3>Lo que el sistema ha medido, y lo que solo se ha declarado</h3>' +
+      '<div class="scroll"><table><thead><tr><th>Metrica</th>' +
+      '<th class="n">Medidas</th><th class="n">Media medida</th>' +
+      '<th class="n">Declaradas</th></tr></thead><tbody>';
+    d.metricas.forEach(function(m){
+      h += "<tr><td>" + esc(m.nombre) + '</td><td class="n">' +
+        sp(m.medidas) + '</td><td class="n">' +
+        (m.media === null ? "—" : m.media) + '</td><td class="n">' +
+        (m.declaradas ? sp(m.declaradas) : "—") + "</td></tr>";
+    });
+    h += "</tbody></table></div><p class='note'>Un prior de peso 20 sigue " +
+      "mandando hasta que llegan ~60 observaciones medidas. Las declaradas se " +
+      "guardan pero no cuentan: la media de esta tabla es solo de lo medido." +
+      "</p></div>";
+  }
+
+  if (d.rechazos.total){
+    h += '<div class="panel"><h3>Rechazos del revisor</h3><p class="note">' +
+      esc(d.rechazos.tendencia) + "</p>";
+    if (d.rechazos.al_brief.length){
+      h += "<h4>Lo que vuelve al brief</h4><ul>";
+      d.rechazos.al_brief.forEach(function(i){ h += "<li>" + esc(i) + "</li>"; });
+      h += "</ul>";
+    }
+    h += "</div>";
+  }
+  $("#mem-out").innerHTML = h;
+}
+
+async function comprobarBorrador(){
+  var boton = $("#mem-check");
+  boton.disabled = true;
+  try {
+    var r = await post("/api/memoria/comprobar",
+                       {cliente: cliente(), text: $("#mem-text").value});
+    var s = r.sitio;
+    var h = '<div class="panel"><h3>Contra este sitio</h3><div class="tiles">' +
+      '<div class="tile"><b>' + Math.round(s.valor * 100) +
+      '%</b><span>solape maximo</span></div>' +
+      tile(s.comparadas, "paginas comparadas") +
+      '</div><p class="note">' + esc(s.lectura) + "</p></div>";
+
+    if (r.cartera.length){
+      h += '<div class="panel"><h3>Contra el resto de la cartera</h3>' +
+        '<p class="note">Es la guarda del quinto patron de scaled content ' +
+        "abuse: repartir la misma salida entre varios sitios para ocultar la " +
+        "escala. Se comprueba antes de publicar, no despues.</p>" +
+        '<div class="scroll"><table><thead><tr><th>Sitio</th>' +
+        '<th class="n">Frases</th><th class="n">Esqueleto</th><th>Veredicto</th>' +
+        "</tr></thead><tbody>";
+      r.cartera.forEach(function(x){
+        h += "<tr><td>" + esc(x.otro) + '</td><td class="n">' +
+          (x.frases * 100).toFixed(1) + '%</td><td class="n">' +
+          Math.round(x.esqueleto * 100) + "%</td><td>" +
+          (x.bloquea ? "<b>BLOQUEA</b>" : "ok") + "</td></tr>";
+      });
+      h += "</tbody></table></div></div>";
+    }
+    $("#mem-check-out").innerHTML = h;
+  } catch(e){ fallo("#mem-check-out", e); }
+  finally { boton.disabled = false; }
+}
+
+async function guardarPagina(){
+  var boton = $("#mem-save");
+  boton.disabled = true;
+  try {
+    var r = await post("/api/memoria/pagina", {
+      cliente: cliente(), slug: $("#mem-slug").value,
+      text: $("#mem-text").value, url: $("#mem-url").value,
+      role: $("#mem-role").value});
+    $("#mem-check-out").innerHTML = '<div class="ok"><b>Guardada ' +
+      esc(r.guardada.slug) + "</b> — " + sp(r.guardada.palabras) +
+      " palabras, " + sp(r.guardada.fragmentos) + " fragmentos. " +
+      esc(r.solape_previo.lectura) + " El corpus tiene ya " + r.paginas +
+      " pagina(s).</div>";
+    verMemoria();
+  } catch(e){ fallo("#mem-check-out", e); }
+  finally { boton.disabled = false; }
+}
+
+async function guardarObservacion(){
+  var boton = $("#mem-obs-go");
+  boton.disabled = true;
+  try {
+    var r = await post("/api/memoria/observacion", {
+      cliente: cliente(), metrica: $("#mem-metrica").value,
+      valor: $("#mem-valor").value, fuente: $("#mem-fuente").value,
+      nota: $("#mem-nota").value});
+    $("#mem-obs-out").innerHTML = '<div class="ok">Apunte ' + r.guardada.seq +
+      " guardado. " + r.vigentes + " vigente(s), " + r.medidas + " medida(s)." +
+      (r.aviso ? " <b>" + esc(r.aviso) + "</b>" : "") + "</div>";
+    verMemoria();
+  } catch(e){ fallo("#mem-obs-out", e); }
+  finally { boton.disabled = false; }
+}
+
 /* --- arranque --------------------------------------------------------- */
 $$("nav.tabs button").forEach(function(b){
   b.addEventListener("click", function(){ abrir(b.getAttribute("data-tab")); });
@@ -489,6 +649,10 @@ $("#opo-go").addEventListener("click", medirOportunidad);
 $("#clu-go").addEventListener("click", medirClusters);
 conectarFichero("#opo-file", "#opo-csv");
 conectarFichero("#clu-file", "#clu-csv");
+$("#mem-go").addEventListener("click", verMemoria);
+$("#mem-check").addEventListener("click", comprobarBorrador);
+$("#mem-save").addEventListener("click", guardarPagina);
+$("#mem-obs-go").addEventListener("click", guardarObservacion);
 
 var EJEMPLO_CIT = "# Coste de un sistema septico aerobico\n\n" +
   "## Cuanto cuesta instalar un sistema aerobico en Texas?\n\n" +
@@ -515,7 +679,7 @@ $("#clu-csv").value = "Keyword,Search Volume,CPC\n" +
   "mantenimiento septico aerobico,800,7\n";
 
 var inicial = (location.hash || "#auditoria").slice(1);
-abrir(["auditoria","citabilidad","oportunidad","clusters"].indexOf(inicial) >= 0
+abrir(["auditoria","citabilidad","oportunidad","clusters","memoria"].indexOf(inicial) >= 0
       ? inicial : "auditoria");
 medirCitabilidad();
 """
@@ -533,6 +697,7 @@ BODY = """
   <button data-tab="citabilidad" aria-selected="false">2 · Citabilidad</button>
   <button data-tab="oportunidad" aria-selected="false">3 · Oportunidad</button>
   <button data-tab="clusters" aria-selected="false">4 · Clusters</button>
+  <button data-tab="memoria" aria-selected="false">5 · Memoria</button>
 </nav>
 
 <!-- 1 -->
@@ -628,8 +793,95 @@ BODY = """
   </div>
   <div id="clu-out"></div>
 </div>
+<!-- 5 -->
+<div data-panel="memoria" hidden>
+  <div class="panel">
+    <h2>Lo que el sistema recuerda</h2>
+    <p class="note">Las otras cuatro pestanas miden y se olvidan. Esta acumula:
+    el corpus con el que se detecta que una pagina nueva es una reescritura de
+    otra, las observaciones que van apagando los priores, y los rechazos del
+    revisor que vuelven convertidos en instrucciones del brief. Es lo que hace
+    que el sistema mejore con el uso en vez de repetir el mismo trabajo cada
+    mes.</p>
+    <div class="row">
+      <div class="grow">
+        <label for="mem-cliente">Cliente</label>
+        <input type="text" id="mem-cliente" value="demo" autocomplete="off"
+               spellcheck="false" placeholder="minusculas, numeros, guion">
+      </div>
+      <div><button class="go" id="mem-go" type="button">Ver memoria</button></div>
+    </div>
+    <p class="note" style="margin-top:10px">El almacen guarda firmas, no texto:
+    una pagina de 1.500 palabras ocupa ~5 KB en vez de ~85 KB, y el fichero no
+    contiene ninguna frase del contenido. Se puede abrir y leer.</p>
+  </div>
+  <div id="mem-out"></div>
+
+  <div class="panel">
+    <h3>Comprobar un borrador antes de publicarlo</h3>
+    <p class="note">Contra lo ya publicado de este sitio y contra el resto de la
+    cartera. Comprobar despues de publicar encuentra el problema cuando ya esta
+    indexado.</p>
+    <label for="mem-text">Borrador en markdown</label>
+    <textarea id="mem-text" spellcheck="false"></textarea>
+    <div class="row">
+      <div><button class="go" id="mem-check" type="button">Comprobar</button></div>
+      <div><label for="mem-slug">Slug</label>
+        <input type="text" id="mem-slug" placeholder="coste-instalacion"
+               autocomplete="off" spellcheck="false"></div>
+      <div><label for="mem-role">Rol</label>
+        <input type="text" id="mem-role" placeholder="pilar" autocomplete="off"></div>
+      <div class="grow"><label for="mem-url">URL publicada</label>
+        <input type="text" id="mem-url" placeholder="/coste-instalacion"
+               autocomplete="off" spellcheck="false"></div>
+      <div><button class="ghost" id="mem-save" type="button">Guardar como publicada</button></div>
+    </div>
+  </div>
+  <div id="mem-check-out"></div>
+
+  <div class="panel">
+    <h3>Anotar una observacion</h3>
+    <p class="note">Una observacion medida diluye el prior correspondiente. Una
+    declarada se guarda igual pero <b>no</b> alimenta nada: si una estimacion
+    pudiera apagar una suposicion, el informe dejaria de distinguir lo que sabe
+    de lo que supone, que es lo unico que se vende aqui.</p>
+    <div class="row">
+      <div class="grow"><label for="mem-metrica">Metrica</label>
+        <input type="text" id="mem-metrica" value="ctr_posicion_1"
+               autocomplete="off" spellcheck="false"></div>
+      <div><label for="mem-valor">Valor</label>
+        <input type="number" id="mem-valor" step="any" value="0.21"></div>
+      <div><label for="mem-fuente">Fuente</label>
+        <select id="mem-fuente">
+          <option value="medido">medido</option>
+          <option value="declarado">declarado</option>
+        </select></div>
+      <div class="grow"><label for="mem-nota">Nota</label>
+        <input type="text" id="mem-nota" placeholder="de donde sale el numero"
+               autocomplete="off"></div>
+      <div><button class="go" id="mem-obs-go" type="button">Anotar</button></div>
+    </div>
+    <p class="note" style="margin-top:10px">El historico es de solo anadir. Una
+    medicion equivocada se corrige anadiendo la correccion, no borrando el
+    error: borrar el pasado deja un sistema que no puede explicar como llego a
+    sus numeros.</p>
+  </div>
+  <div id="mem-obs-out"></div>
+</div>
 </div>
 """
+
+
+# SVG de 16 bytes utiles: un cuadrado con el acento de la interfaz. En linea en
+# la propia pagina, asi que no hay peticion extra ni 404 en la consola.
+FAVICON = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">'
+    '<rect width="16" height="16" rx="3" fill="#111"/>'
+    '<rect x="3" y="7" width="3" height="6" fill="#4f8cc9"/>'
+    '<rect x="7" y="4" width="3" height="9" fill="#4f8cc9"/>'
+    '<rect x="11" y="9" width="2" height="4" fill="#5c6670"/>'
+    "</svg>"
+)
 
 
 def page() -> str:
@@ -638,6 +890,8 @@ def page() -> str:
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         '<meta name="robots" content="noindex, nofollow">\n'
+        '<link rel="icon" href="data:image/svg+xml,'
+        + quote(FAVICON) + '">\n'
         "<title>Banco de pruebas SEO-GEO</title>\n"
         f"<style>{STYLE}</style>\n</head>\n<body>\n{BODY}\n"
         f"<script>{SCRIPT}</script>\n</body>\n</html>\n"

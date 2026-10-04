@@ -11,7 +11,7 @@ import json
 import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from . import api
 from .jobs import STATE_FAILED, STATE_RUNNING, Registry
@@ -85,6 +85,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/salud":
             self._json(200, {"ok": True, "version": "0.1.0"})
             return
+        if path == "/api/memoria":
+            params = parse_qs(urlparse(self.path).query)
+            cliente = api.normalize_client((params.get("cliente") or [""])[0])
+            self._json(200, api.memory_state(cliente))
+            return
         if path.startswith("/api/job/"):
             resto = path[len("/api/job/"):].strip("/")
             quiere_resultado = resto.endswith("/resultado")
@@ -130,6 +135,22 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/clusters":
             self._json(200, api.clusters(data.get("csv", ""),
                                          data.get("cap", 24)))
+            return
+        if path == "/api/memoria/comprobar":
+            cliente = api.normalize_client(data.get("cliente", ""))
+            self._json(200, api.memory_check(cliente, data.get("text", "")))
+            return
+        if path == "/api/memoria/pagina":
+            cliente = api.normalize_client(data.get("cliente", ""))
+            self._json(200, api.memory_record(
+                cliente, data.get("slug", ""), data.get("text", ""),
+                url=data.get("url", ""), role=data.get("role", "")))
+            return
+        if path == "/api/memoria/observacion":
+            cliente = api.normalize_client(data.get("cliente", ""))
+            self._json(200, api.memory_observe(
+                cliente, data.get("metrica", ""), data.get("valor"),
+                fuente=data.get("fuente", "medido"), nota=data.get("nota", "")))
             return
         self._json(404, {"error": "No hay nada en esa ruta."})
 

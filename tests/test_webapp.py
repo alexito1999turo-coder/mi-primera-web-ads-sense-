@@ -266,3 +266,161 @@ class TestAuditoriaDePuntaAPunta(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMemoriaHTTP(unittest.TestCase):
+    """La memoria por HTTP, con el almacen en un directorio temporal."""
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        import tempfile
+
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.antes = os.environ.get("BANCO_DATOS")
+        os.environ["BANCO_DATOS"] = cls.tmp.name
+        cls.app = Background().__enter__()
+
+    @classmethod
+    def tearDownClass(cls):
+        import os
+
+        cls.app.__exit__(None, None, None)
+        if cls.antes is None:
+            os.environ.pop("BANCO_DATOS", None)
+        else:
+            os.environ["BANCO_DATOS"] = cls.antes
+        cls.tmp.cleanup()
+
+    def cuerpo(self, tema: str, n: int = 160) -> str:
+        frases = [
+            f"El {tema} depende del numero de dormitorios de la vivienda.",
+            f"En {tema} la normativa del condado manda sobre la del estado.",
+            f"Un {tema} mal dimensionado se nota en la factura de luz.",
+        ]
+        return " ".join(frases[i % 3] + f" Caso {tema} numero {i}."
+                        for i in range(n))
+
+    def test_la_pestana_de_memoria_existe_en_la_pagina(self):
+        estado, _ = pedir(self.app.base, "/salud")
+        self.assertEqual(estado, 200)
+        req = urllib.request.Request(self.app.base + "/")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode()
+        self.assertIn('data-panel="memoria"', html)
+        self.assertIn("/api/memoria", html)
+
+    def test_cliente_vacio_o_con_ruta_se_rechaza(self):
+        for malo in ("", "../etc", "a/b", ".oculto"):
+            estado, data = pedir(
+                self.app.base, "/api/memoria?cliente=" + malo.replace("/", "%2F"))
+            self.assertEqual(estado, 400, f"{malo!r} deberia dar 400")
+            self.assertIn("error", data)
+
+    def test_ciclo_completo_guardar_comprobar_y_consultar(self):
+        cuerpo = self.cuerpo("coste de instalacion")
+
+        estado, vacio = pedir(self.app.base, "/api/memoria?cliente=ciclo")
+        self.assertEqual(estado, 200)
+        self.assertEqual(vacio["paginas"], [])
+
+        estado, guardada = pedir(self.app.base, "/api/memoria/pagina", {
+            "cliente": "ciclo", "slug": "coste-instalacion", "text": cuerpo,
+            "url": "/coste-instalacion", "role": "pilar"}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertFalse(guardada["solape_previo"]["medido"],
+                         "la primera pagina no tenia con que compararse")
+
+        # La misma pagina con otro slug: el solape se ve por HTTP.
+        estado, check = pedir(self.app.base, "/api/memoria/comprobar",
+                              {"cliente": "ciclo", "text": cuerpo}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertTrue(check["sitio"]["medido"])
+        self.assertGreater(check["sitio"]["valor"], 0.9)
+        self.assertEqual(check["sitio"]["contra"], "coste-instalacion")
+
+        # Una distinta, no.
+        estado, limpia = pedir(self.app.base, "/api/memoria/comprobar",
+                               {"cliente": "ciclo",
+                                "text": self.cuerpo("permisos municipales")},
+                               "POST")
+        self.assertLess(limpia["sitio"]["valor"], 0.1)
+
+        estado, consulta = pedir(self.app.base, "/api/memoria?cliente=ciclo")
+        self.assertEqual(len(consulta["paginas"]), 1)
+        self.assertEqual(consulta["paginas"][0]["rol"], "pilar")
+
+    def test_lo_declarado_se_guarda_pero_se_avisa(self):
+        estado, medida = pedir(self.app.base, "/api/memoria/observacion", {
+            "cliente": "obs", "metrica": "cpc", "valor": 1.4,
+            "fuente": "medido", "nota": "panel de Ads"}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertEqual(medida["aviso"], "")
+
+        estado, declarada = pedir(self.app.base, "/api/memoria/observacion", {
+            "cliente": "obs", "metrica": "cpc", "valor": 9.9,
+            "fuente": "declarado", "nota": "estimacion de la propuesta"}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertIn("NO alimenta", declarada["aviso"])
+        self.assertEqual(declarada["vigentes"], 2)
+        self.assertEqual(declarada["medidas"], 1)
+
+    def test_entradas_malas_dan_400_y_no_una_traza(self):
+        casos = [
+            ("/api/memoria/observacion", {"cliente": "x", "metrica": "cpc",
+                                          "valor": "no un numero"}),
+            ("/api/memoria/observacion", {"cliente": "x", "metrica": "CPC MAL",
+                                          "valor": 1}),
+            ("/api/memoria/observacion", {"cliente": "x", "metrica": "cpc",
+                                          "valor": 1, "fuente": "inventada"}),
+            ("/api/memoria/observacion", {"cliente": "x", "metrica": "cpc",
+                                          "valor": float("1e400")}),
+            ("/api/memoria/pagina", {"cliente": "x", "slug": "../fuera",
+                                     "text": "algo"}),
+            ("/api/memoria/pagina", {"cliente": "x", "slug": "ok", "text": ""}),
+            ("/api/memoria/comprobar", {"cliente": "x", "text": "  "}),
+        ]
+        for ruta, cuerpo in casos:
+            estado, data = pedir(self.app.base, ruta, cuerpo, "POST")
+            self.assertEqual(estado, 400, f"{ruta} {cuerpo} deberia dar 400")
+            self.assertIn("error", data)
+            self.assertNotIn("Traceback", json.dumps(data))
+
+    def test_la_cartera_avisa_del_mismo_contenido_en_otro_sitio(self):
+        cuerpo = ("## Que es\n" + self.cuerpo("sistema aerobico") +
+                  "\n## Cuanto cuesta\n" + self.cuerpo("coste del sistema"))
+        pedir(self.app.base, "/api/memoria/pagina",
+              {"cliente": "sitio-a", "slug": "guia", "text": cuerpo}, "POST")
+        estado, check = pedir(self.app.base, "/api/memoria/comprobar",
+                              {"cliente": "sitio-b", "text": cuerpo}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertTrue(check["bloquea"],
+                        "el mismo contenido en dos sitios de la cartera bloquea")
+        self.assertTrue(any(c["otro"] == "sitio-a" for c in check["cartera"]))
+
+    def test_la_media_de_una_metrica_no_mezcla_lo_declarado(self):
+        """Regresion: el panel titulaba «lo que el sistema ha medido» y
+
+        promediaba tambien lo declarado. Es la mezcla que todo el resto del
+        sistema evita, y se colo en la unica pieza que la ensena.
+        """
+        for valor, fuente in ((0.20, "medido"), (0.20, "medido"),
+                              (9.00, "declarado")):
+            pedir(self.app.base, "/api/memoria/observacion",
+                  {"cliente": "mezcla", "metrica": "ctr", "valor": valor,
+                   "fuente": fuente, "nota": "n"}, "POST")
+        _, estado = pedir(self.app.base, "/api/memoria?cliente=mezcla")
+        fila = [m for m in estado["metricas"] if m["nombre"] == "ctr"][0]
+        self.assertEqual(fila["observaciones"], 3)
+        self.assertEqual(fila["medidas"], 2)
+        self.assertEqual(fila["declaradas"], 1)
+        self.assertEqual(fila["media"], 0.2, "la media es solo de lo medido")
+
+    def test_una_metrica_solo_declarada_no_tiene_media(self):
+        pedir(self.app.base, "/api/memoria/observacion",
+              {"cliente": "solodecl", "metrica": "cpc", "valor": 5,
+               "fuente": "declarado", "nota": "propuesta"}, "POST")
+        _, estado = pedir(self.app.base, "/api/memoria?cliente=solodecl")
+        fila = [m for m in estado["metricas"] if m["nombre"] == "cpc"][0]
+        self.assertIsNone(fila["media"])
+        self.assertEqual(fila["medidas"], 0)
