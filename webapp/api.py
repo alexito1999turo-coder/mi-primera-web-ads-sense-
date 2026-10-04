@@ -170,9 +170,33 @@ def opportunity(csv_text: str) -> dict:
         )
     report = analyse_opportunity(Report(rows=rows))
     if not report.ranked:
+        # El mensaje tiene que decir el motivo DE VERDAD. El de antes mandaba
+        # a exportar con la columna de posicion aunque la posicion estuviera
+        # ahi y el problema fuera el volumen: mandar a hacer algo que no
+        # arregla nada es peor que no decir nada.
+        from insight.opportunity import MIN_IMPRESSIONS
+
+        if report.unmeasurable and not report.skipped_low_volume:
+            raise BadRequest(
+                f"Las {report.unmeasurable} fila(s) no traen posicion media, "
+                "que es lo que hace falta para estimar cuanto clic se gana al "
+                "subir. En Search Console, exporta desde Rendimiento con la "
+                "columna «Posicion» activada."
+            )
+        if report.skipped_low_volume:
+            techo = max((r.impressions for r in rows), default=0)
+            raise BadRequest(
+                f"Ninguna de las {len(rows)} consulta(s) llega a "
+                f"{MIN_IMPRESSIONS} impresiones; la que mas tiene se queda en "
+                f"{techo}. Con ese volumen cualquier orden que saliera seria "
+                "ruido con aspecto de dato, asi que no se calcula. Es un sitio "
+                "demasiado nuevo o un periodo demasiado corto: amplia el rango "
+                "de fechas, y si aun asi no llega, lo que toca todavia no es "
+                "priorizar sino publicar y arreglar lo estructural."
+            )
         raise BadRequest(
-            "Ninguna fila tiene posicion y volumen suficientes para estimar "
-            "oportunidad. Exporta con la columna de posicion."
+            "No hay ninguna fila con posicion y volumen suficientes para "
+            "estimar oportunidad."
         )
 
     def pack(items):

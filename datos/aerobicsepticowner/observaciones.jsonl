@@ -1,1 +1,8 @@
 {"at": "2026-10-04T11:14:04+00:00", "metric": "tope_mensual_paginas", "note": "decision de riesgo, no limite tecnico", "seq": 1, "source": "declarado", "value": 24.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "impresiones_periodo", "note": "Search Console, 2026-09-21 a 2026-09-29, 9 dias", "seq": 2, "source": "medido", "value": 154.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "clics_periodo", "note": "Search Console, mismo periodo", "seq": 3, "source": "medido", "value": 2.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "posicion_media_eeuu", "note": "Search Console, Estados Unidos, 123 impresiones", "seq": 4, "source": "medido", "value": 30.87}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "urls_indexadas", "note": "Search Console, informe de paginas", "seq": 5, "source": "medido", "value": 21.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "archivos_etiqueta_indexados", "note": "contados en el informe de paginas", "seq": 6, "source": "medido", "value": 6.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "impresiones_en_archivos_etiqueta", "note": "16% del total del sitio", "seq": 7, "source": "medido", "value": 26.0}
+{"at": "2026-10-04T21:53:19+00:00", "metric": "urls_sin_slug_indexadas", "note": "URLs tipo ?p=NN en el informe de paginas", "seq": 8, "source": "medido", "value": 3.0}

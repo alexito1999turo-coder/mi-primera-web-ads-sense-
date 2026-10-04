@@ -35,6 +35,11 @@ SIGNALS: tuple[tuple[str, int, tuple[str, ...]], ...] = (
             "price", "pricing", "cheap", "barato", "calculator", "calculadora",
             "how much", "cuanto cuesta", "cuánto cuesta", "worth it",
             "merece la pena", "brands", "marcas", "which ",
+            # Quien busca un contrato o una garantia esta comparando
+            # proveedores de un servicio, no leyendo sobre el.
+            "contract", "contrato", "agreement", "acuerdo",
+            "service plan", "plan de servicio", "warranty", "garantia",
+            "garantía", "subscription", "suscripcion", "suscripción",
         ),
     ),
     (
@@ -68,6 +73,11 @@ SIGNALS: tuple[tuple[str, int, tuple[str, ...]], ...] = (
             "failure", "fallo", "failing", "error code", "codigo de error",
             "código de error", "beeping", "pitando", "pita", "alarm", "alarma",
             "troubleshoot", "problema", "problems", "problemas", "fix ",
+            # Vistos en datos reales: la luz de aviso y el corte de luz son
+            # averias de libro y se nos escapaban enteras.
+            "red light", "luz roja", "warning light", "luz de aviso",
+            "power outage", "corte de luz", "apagon", "apagón", "reset",
+            "no arranca", "wont drain", "won't drain",
             "repair", "reparar", "arreglar", "won't turn on", "no enciende",
             "replace", "reemplazar", "sustituir",
         ),
@@ -82,6 +92,13 @@ SIGNALS: tuple[tuple[str, int, tuple[str, ...]], ...] = (
             "symptoms", "sintomas", "síntomas", "causes", "causas",
             "explained", "explicado", "tips", "consejos", "history", "historia",
             "examples", "ejemplos", "benefits", "beneficios", "types", "tipos",
+            # Material de referencia: quien pide un diagrama, una plantilla o
+            # una lista quiere el documento, no el servicio. Lo generaliza
+            # cualquier nicho: todos tienen su «X diagram» y su «X template».
+            "diagram", "diagrama", "schematic", "esquema", "layout",
+            "look like", "como es", "cómo es", "checklist", "lista de",
+            "template", "plantilla", "parts of", "partes de",
+            "where to", "donde se", "dónde se",
         ),
     ),
 )

@@ -96,3 +96,55 @@ class TestIntencionDeProblema(unittest.TestCase):
 
     def test_una_averia_no_cuenta_como_informacional_en_riesgo(self):
         self.assertFalse(self.clasificar("septic alarm going off").at_risk)
+
+
+class TestSenalesVistasEnDatosReales(unittest.TestCase):
+    """Huecos encontrados pasando consultas reales de un sitio por el modelo.
+
+    El 73% salia «sin determinar», que es tanto como no clasificar. Las
+    senales que se anadieron son las que generalizan a cualquier nicho, no
+    las de este: todo sector tiene su «X diagram» y su «X contract».
+    """
+
+    def c(self, texto):
+        return classify(texto, texto).label
+
+    def test_la_luz_de_aviso_y_el_corte_de_luz_son_averias(self):
+        for q in ("red light on aerobic septic system",
+                  "aerobic septic system power outage",
+                  "luz roja en la depuradora",
+                  "septic system wont drain"):
+            with self.subTest(q=q):
+                self.assertEqual(self.c(q), "problem")
+
+    def test_contratar_un_servicio_es_comprar(self):
+        for q in ("septic system service contracts",
+                  "septic maintenance contract",
+                  "ossf maintenance contract",
+                  "contrato de mantenimiento de fosa septica"):
+            with self.subTest(q=q):
+                self.assertEqual(self.c(q), "commercial")
+
+    def test_el_material_de_referencia_es_informacional(self):
+        for q in ("aerobic septic system diagram",
+                  "aerobic septic system layout",
+                  "septic system maintenance checklist",
+                  "what does an aerobic septic system look like",
+                  "diagrama de una fosa septica"):
+            with self.subTest(q=q):
+                self.assertEqual(self.c(q), "informational")
+
+    def test_comprar_sigue_ganando_al_material_de_referencia(self):
+        """«Donde comprar» no es lo mismo que «donde poner»."""
+        self.assertEqual(self.c("where to buy septic chlorine tablets"),
+                         "transactional")
+
+    def test_un_nombre_de_producto_suelto_se_queda_sin_determinar(self):
+        """Y esta bien: no hay senal de intencion en el texto.
+
+        Adivinarla seria inventar, que es justo lo que el sistema no hace.
+        El limite esta documentado en vez de escondido tras una etiqueta.
+        """
+        for q in ("aerobic septic chlorine tablets", "aerobic chamber"):
+            with self.subTest(q=q):
+                self.assertEqual(self.c(q), "undetermined")
