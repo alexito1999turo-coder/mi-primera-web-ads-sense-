@@ -152,8 +152,17 @@ class Shopify:
         Lo que WordPress llama `slug`, Shopify lo llama `handle`. La traduccion
         se queda dentro: el llamante sigue pasando el slug del borrador.
         """
-        handle = urllib.parse.quote(slug, safe="")
-        status, data = self._call("GET", f"{self._articles}.json?handle={handle}")
+        # `published_status=any` se pide EXPLICITAMENTE, igual que `status=any` en
+        # el publicador de WordPress. El modo normal de este adaptador es
+        # borrador, o sea `published` false, asi que el articulo que hay que
+        # encontrar casi siempre esta sin publicar. Cual sea el defecto de la API
+        # Admin cuando no se pide nada no es parte de nuestro contrato: si no
+        # incluyera los no publicados, esta busqueda devolveria None para un
+        # borrador que ya existe, `publish` tomaria la rama de creacion y
+        # duplicaria el articulo en cada ejecucion. Es justo el fallo que este
+        # metodo existe para evitar.
+        query = urllib.parse.urlencode({"handle": slug, "published_status": "any"})
+        status, data = self._call("GET", f"{self._articles}.json?{query}")
         if not 200 <= status < 300 or not isinstance(data, dict):
             return None
         articles = data.get("articles")

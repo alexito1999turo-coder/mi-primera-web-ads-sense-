@@ -17,7 +17,7 @@ from . import intent as intent_mod
 from . import page as page_mod
 from . import robots as robots_mod
 from . import rules as rules_mod
-from .http import Client
+from .http import REDIRECT_OTHER_PATH, Client
 from .sitemaps import Sitemap, discover
 
 ARCHIVE_KINDS = ("author", "category", "tag")
@@ -187,8 +187,10 @@ def run(
             self_canonical=parsed.self_canonical,
             in_sitemap=True,
             verification=response.summary(),
+            final_url=response.final_url,
+            redirect_kind=response.redirect_kind,
         )
-        if response.redirect_kind == "otra ruta":
+        if response.redirect_kind == REDIRECT_OTHER_PATH:
             audit.warnings.append(
                 f"{url} redirige a {response.final_url}: la URL que declara el "
                 "sitemap no es la que se sirve. Corregir el sitemap o el destino."

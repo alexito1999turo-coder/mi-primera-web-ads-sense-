@@ -44,6 +44,12 @@ class Archive:
     self_canonical: bool = False
     in_sitemap: bool = False
     verification: str = ""
+    # La URL servida y que clase de salto hubo. Van como campos y no solo
+    # dentro de `verification` porque hay quien decide con ellos: leerlos de
+    # una linea de texto renderizada deja de funcionar en cuanto esa linea
+    # cambia, y sin que falle nada.
+    final_url: str = ""
+    redirect_kind: str = ""
     # Articulos que podrian reasignarse aqui para convertirlo en hub.
     recategorization_candidates: list[str] = field(default_factory=list)
 

@@ -23,10 +23,12 @@ a abrir un correo nuestro.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from auditor.audit import Audit
+from auditor.http import REDIRECT_OTHER_PATH
 from auditor.rules import (
     ACTION_DISABLE,
     ACTION_NOINDEX,
@@ -39,11 +41,13 @@ CODE_AUTHOR = "archivo_autor"
 CODE_THIN = "archivo_fino"
 CODE_RECATEGORIZE = "recategorizable"
 CODE_SITEMAP = "sitemap_no_declarado"
+CODE_REDIRECT = "sitemap_desactualizado"
 CODE_INTENT = "intencion_en_riesgo"
 CODE_CANNIBAL = "canibalizacion"
 
 # Por debajo de esto el reparto de intencion no es un hallazgo, es ruido.
 INTENT_RISK_PCT = 40.0
+
 
 
 @dataclass
@@ -119,6 +123,48 @@ def nothing_measured(audit: Audit) -> bool:
     "lo tecnico esta limpio" no sale de ninguna medicion.
     """
     return not audit.archives and not audit.post_count
+
+
+# -- el sitemap que miente --------------------------------------------------
+
+@dataclass
+class Redirect:
+    """Una URL que el sitemap declara y la que el sitio sirve en su lugar."""
+
+    declared: str
+    served: str
+    verification: str
+
+
+def sitemap_redirects(audit: Audit) -> list[Redirect]:
+    """Archivos cuya URL declarada en el sitemap no es la que se sirve.
+
+    Se leen los campos `redirect_kind` y `final_url` del propio archivo, no
+    `audit.warnings`: el dato viene ya emparejado con SU archivo, sin deducir de
+    un texto a que URL se referia ni descartar las otras cuatro clases de aviso
+    que comparten ese saco. Y el veredicto se compara contra la constante del
+    auditor, no contra una copia del literal.
+
+    Se cuentan todas las redirecciones a otra ruta, sin mirar el codigo del
+    destino, igual que hace el auditor: lo que se afirma es que la URL
+    declarada no es la servida, y eso es cierto acabe el salto donde acabe.
+
+    El alcance es el de `audit.archives`, y eso no es todo el sitemap: el
+    auditor solo pide las URL de listado (autor, categoria y etiqueta), nunca
+    las de articulo, y ademas corta en `max_archives`. Por eso la cifra que
+    sale de aqui es la de las URL de listado medidas, no el total del sitemap,
+    y el texto del hallazgo tiene que decirlo con esas palabras.
+    """
+    found: list[Redirect] = []
+    for archive in audit.archives:
+        if archive.redirect_kind != REDIRECT_OTHER_PATH:
+            continue
+        found.append(Redirect(
+            declared=archive.url,
+            served=archive.final_url,
+            verification=archive.verification,
+        ))
+    return found
 
 
 # -- traduccion de hallazgos ------------------------------------------------
@@ -260,6 +306,58 @@ def findings_for(audit: Audit) -> list[Finding]:
             ),
             priority=3,
             evidence=[audit.robots.verification],
+        ))
+
+    # Las cinco cosas que escriben en `audit.warnings` y por que solo una es un
+    # hallazgo. Decision tomada: esta aqui para no volver a tomarla.
+    #   audit.py:133 "robots.txt no declara el sitemap" -> NO: ya es
+    #     CODE_SITEMAP, y repetirlo seria decir dos veces lo mismo.
+    #   audit.py:155 "Existe sitemap de <kind>" -> NO: esos archivos ya salen
+    #     como CODE_AUTHOR / CODE_THIN / CODE_RECATEGORIZE.
+    #   audit.py:192 "<url> redirige a <otra>" -> SI: es un problema medido del
+    #     sitio que ningun otro codigo cubre. Es el de aqui abajo.
+    #   rules.py:156 "AVISO: la regla propone noindex en las N categorias" ->
+    #     NO: es una nota para quien aplica NUESTRA recomendacion, no un fallo
+    #     de la marca; mandarsela seria contarle nuestras dudas como su error.
+    #   rules.py:163 "N archivo(s) son hubs legitimos" -> NO: es una buena
+    #     noticia, y un hallazgo es un problema.
+    redirects = sitemap_redirects(audit)
+    if redirects:
+        total = len(redirects)
+        found.append(Finding(
+            code=CODE_REDIRECT,
+            # "de listado" no es relleno: solo se piden las URL de listado,
+            # asi que una cifra a secas sobre "el sitemap" afirmaria tambien
+            # algo de las URL de articulo, que no se han medido.
+            figure=(f"{total} URL de listado del sitemap que "
+                    f"{_verb(total, 'redirige', 'redirigen')}"),
+            headline=(
+                f"Tu sitemap manda a Google a {total} URL de listado que no "
+                f"{_verb(total, 'es la que se sirve', 'son las que se sirven')}"
+                f": {_verb(total, 'redirige', 'redirigen')} a otra direccion"
+            ),
+            why=(
+                "El sitemap es la lista con la que el buscador decide que "
+                "paginas visita y en que orden. Cuando una URL de esa lista "
+                "redirige, el robot gasta la visita en el salto y no en la "
+                "pagina que de verdad sirves, y lo que publicas nuevo espera "
+                "turno detras de ese trabajo repetido. Ademas es la senal de "
+                "que el sitemap y el sitio ya no cuentan lo mismo, que es "
+                "justo lo que ese fichero existe para evitar."
+            ),
+            fix=(
+                "Regenerar el sitemap para que declare la URL final, la que "
+                "responde directamente. Si la direccion que quieres mantener "
+                "es la antigua, el arreglo es el contrario: que el sitio la "
+                "sirva en vez de redirigirla. Lo que no puede quedarse es la "
+                "pareja descolocada."
+            ),
+            # Por encima del robots.txt sin declarar (3), que es higiene: aqui
+            # hay URL medidas una por una. Por debajo de lo que ya es dinero
+            # escrito y mal colocado (1).
+            priority=2,
+            samples=[f"{r.declared} — se sirve {r.served}" for r in redirects],
+            evidence=[r.verification for r in redirects],
         ))
 
     risk = audit.intent_distribution.get("informational", 0.0)

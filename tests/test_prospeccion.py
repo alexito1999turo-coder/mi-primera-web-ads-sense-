@@ -13,15 +13,19 @@ from pathlib import Path
 from prospeccion.batch import parse_domains, read_domains, run
 from prospeccion.cli import INDEX_NAME, build_parser, main
 from prospeccion.outreach import (
+    CODE_REDIRECT,
     SUMMARY_LINES,
     brand_for,
     build,
     nothing_measured,
+    sitemap_redirects,
 )
 from tests.fakes import SITE, FakeClient, routes
 
 SITIO_LIMPIO = "https://limpio.test"
 SITIO_MUDO = "https://mudo.test"
+SITIO_REDIR = "https://redirige.test"
+SITIO_AVISOS = "https://avisos.test"
 HOST_ROTO = "roto.test"
 
 
@@ -410,6 +414,252 @@ class TestLineaDeComandos(unittest.TestCase):
         self.assertEqual(args.out, "informes")
         with self.assertRaises(SystemExit):
             build_parser().parse_args([])
+
+
+class ClienteQueRedirige:
+    """Doble que sirve una URL distinta de la pedida, como un 301 ya seguido.
+
+    Hace falta porque el doble de tests/fakes.py devuelve siempre final_url
+    igual a la url pedida, y la diferencia entre esas dos es exactamente la
+    senal que mide este hallazgo: el cliente real deja final_url apuntando al
+    destino, y de ahi sale la linea de verificacion.
+    """
+
+    def __init__(self, rutas: dict, destinos: dict[str, str]) -> None:
+        self._fake = FakeClient(rutas)
+        self.destinos = destinos
+
+    @property
+    def request_count(self) -> int:
+        return self._fake.request_count
+
+    @property
+    def requested(self) -> list[str]:
+        return self._fake.requested
+
+    def get(self, url: str):
+        response = self._fake.get(url)
+        destino = self.destinos.get(url)
+        if destino:
+            response.final_url = destino
+        return response
+
+
+def _posts_de_compra(sitio: str) -> list[str]:
+    """Articulos con intencion de compra, no informacionales.
+
+    No es decoracion del escenario: con articulos informacionales saltaria
+    tambien el hallazgo de intencion y el sitio dejaria de aislar lo que se
+    quiere mirar.
+    """
+    return [
+        f"{sitio}/comprar-mesa-de-roble/",
+        f"{sitio}/precio-de-sillas-tapizadas/",
+        f"{sitio}/mejor-sofa-comparativa/",
+        f"{sitio}/instalador-cerca-de-mi/",
+        f"{sitio}/presupuesto-de-montaje/",
+    ]
+
+
+def rutas_con_redirecciones() -> tuple[dict, dict]:
+    """Un sitio sano salvo que su sitemap declara URL que ya no se sirven.
+
+    Las tres categorias son hubs legitimos a proposito: asi el unico hallazgo
+    posible es el del sitemap y la cifra que se comprueba no puede venir de
+    otro sitio. De las tres redirecciones, dos van a otra ruta y la tercera
+    solo anade la barra final, que es la redireccion mas comun de WordPress y
+    no es un problema de nadie.
+    """
+    xml = "application/xml"
+    html = "text/html; charset=UTF-8"
+    posts = _posts_de_compra(SITIO_REDIR)
+    categorias = [
+        f"{SITIO_REDIR}/category/salon/",
+        f"{SITIO_REDIR}/category/cocina/",
+        f"{SITIO_REDIR}/category/dormitorio/",
+    ]
+    rutas = {
+        f"{SITIO_REDIR}/robots.txt": (
+            200, "text/plain",
+            f"User-agent: *\nDisallow: /wp-admin/\n\n"
+            f"Sitemap: {SITIO_REDIR}/sitemap_index.xml\n",
+        ),
+        f"{SITIO_REDIR}/sitemap_index.xml": (200, xml, _index([
+            f"{SITIO_REDIR}/post-sitemap.xml",
+            f"{SITIO_REDIR}/category-sitemap.xml",
+        ])),
+        f"{SITIO_REDIR}/post-sitemap.xml": (200, xml, _urlset(posts)),
+        f"{SITIO_REDIR}/category-sitemap.xml": (200, xml, _urlset(categorias)),
+    }
+    for url in categorias:
+        nombre = url.rstrip("/").rsplit("/", 1)[-1].capitalize()
+        rutas[url] = (200, html, _listado(url, nombre, posts, 900))
+    destinos = {
+        categorias[0]: f"{SITIO_REDIR}/salon/",
+        categorias[1]: f"{SITIO_REDIR}/muebles/cocina/",
+        categorias[2]: f"{SITIO_REDIR}/category/dormitorio",
+    }
+    return rutas, destinos
+
+
+def rutas_de_los_otros_avisos() -> dict:
+    """Un sitio que dispara los avisos 1, 2, 4 y 5 y ninguna redireccion.
+
+    Es el escenario que protege la decision de producto: robots.txt sin linea
+    Sitemap (1), sitemaps de categoria y de etiqueta declarados (2), tres
+    categorias finas que la regla propondria noindexar en bloque (4) y una
+    etiqueta que es hub legitimo (5). Si alguien vuelve a filtrar
+    `audit.warnings` por texto, aqui es donde se ve.
+    """
+    xml = "application/xml"
+    html = "text/html; charset=UTF-8"
+    posts = _posts_de_compra(SITIO_AVISOS)
+    # Temas sin una sola palabra en comun con los articulos: asi no hay
+    # candidatos a recategorizacion y las tres categorias acaban en noindex,
+    # que es la condicion del aviso 4.
+    categorias = [
+        f"{SITIO_AVISOS}/category/zinc/",
+        f"{SITIO_AVISOS}/category/pomelo/",
+        f"{SITIO_AVISOS}/category/ukelele/",
+    ]
+    etiqueta = f"{SITIO_AVISOS}/tag/salon/"
+    rutas = {
+        f"{SITIO_AVISOS}/robots.txt": (200, "text/plain",
+                                       "User-agent: *\nDisallow: /wp-admin/\n"),
+        f"{SITIO_AVISOS}/sitemap_index.xml": (200, xml, _index([
+            f"{SITIO_AVISOS}/post-sitemap.xml",
+            f"{SITIO_AVISOS}/category-sitemap.xml",
+            f"{SITIO_AVISOS}/post_tag-sitemap.xml",
+        ])),
+        f"{SITIO_AVISOS}/post-sitemap.xml": (200, xml, _urlset(posts)),
+        f"{SITIO_AVISOS}/category-sitemap.xml": (200, xml, _urlset(categorias)),
+        f"{SITIO_AVISOS}/post_tag-sitemap.xml": (200, xml, _urlset([etiqueta])),
+        etiqueta: (200, html, _listado(etiqueta, "Salon", posts, 900)),
+    }
+    for url in categorias:
+        nombre = url.rstrip("/").rsplit("/", 1)[-1].capitalize()
+        suelto = f"{SITIO_AVISOS}/requisitos-{nombre.lower()}/"
+        rutas[url] = (200, html, _listado(url, nombre, [suelto], 300))
+    return rutas
+
+
+class TestSitemapDesactualizado(unittest.TestCase):
+    """El sitemap que miente: declara URL que el sitio ya no sirve."""
+
+    def setUp(self):
+        rutas, destinos = rutas_con_redirecciones()
+        self.batch = run(["redirige.test"],
+                         client=ClienteQueRedirige(rutas, destinos))
+        self.audit = self.batch.results[0].audit
+        self.outreach = build(self.audit)
+        self.finding = next(f for f in self.outreach.findings
+                            if f.code == CODE_REDIRECT)
+
+    def test_el_escenario_se_midio_de_verdad(self):
+        # Sin esto el hallazgo podria estar saliendo de un sitio sin medir.
+        self.assertEqual(len(self.audit.archives), 3)
+        self.assertEqual(self.audit.post_count, 5)
+
+    def test_la_cifra_es_la_de_las_url_que_no_sirven_lo_que_declaran(self):
+        # Tres redirecciones, pero la de la barra final no es un problema.
+        self.assertEqual(len(sitemap_redirects(self.audit)), 2)
+        self.assertIn("2", self.finding.figure)
+        self.assertIn("2 URL", self.finding.headline)
+
+    def test_una_redireccion_de_barra_final_no_cuenta_como_hallazgo(self):
+        declaradas = [r.declared for r in sitemap_redirects(self.audit)]
+        self.assertNotIn(f"{SITIO_REDIR}/category/dormitorio/", declaradas)
+        self.assertEqual(sorted(declaradas), [
+            f"{SITIO_REDIR}/category/cocina/",
+            f"{SITIO_REDIR}/category/salon/",
+        ])
+
+    def test_el_hallazgo_trae_las_tres_piezas_y_la_cifra(self):
+        self.assertTrue(self.finding.headline.strip())
+        self.assertTrue(self.finding.why.strip())
+        self.assertTrue(self.finding.fix.strip())
+        self.assertTrue(self.finding.figure.strip())
+        self.assertEqual(self.finding.priority, 2)
+
+    def test_cada_ejemplo_nombra_la_url_declarada_y_la_servida(self):
+        # Es lo que hace accionable el arreglo: sin el destino, la marca tiene
+        # que ir a buscarlo a mano.
+        self.assertEqual(len(self.finding.samples), 2)
+        muestras = " ".join(self.finding.samples)
+        self.assertIn(f"{SITIO_REDIR}/category/salon/", muestras)
+        self.assertIn(f"{SITIO_REDIR}/salon/", muestras)
+        self.assertIn(f"{SITIO_REDIR}/muebles/cocina/", muestras)
+
+    def test_el_hallazgo_va_al_informe_con_su_verificacion_http(self):
+        self.assertEqual(len(self.finding.evidence), 2)
+        for linea in self.finding.evidence:
+            self.assertIn("HTTP", linea)
+            self.assertIn("otra ruta", linea)
+        self.assertIn(self.finding.headline, self.outreach.markdown)
+        self.assertIn("Verificacion: `", self.outreach.markdown)
+
+    def test_el_mensaje_de_tres_lineas_lo_usa_de_gancho_con_la_cifra(self):
+        # Es el unico hallazgo del sitio, asi que encabeza el mensaje.
+        self.assertEqual([f.code for f in self.outreach.findings],
+                         [CODE_REDIRECT])
+        self.assertEqual(len(self.outreach.summary_lines), SUMMARY_LINES)
+        self.assertIn("2 URL", self.outreach.summary_lines[0])
+
+
+class TestSitemapSinRedirecciones(unittest.TestCase):
+    """Un sitio sin redirecciones no recibe este hallazgo."""
+
+    def test_un_sitio_limpio_no_lo_genera(self):
+        batch = run(["limpio.test"], client=FakeClient(rutas_limpias()))
+        audit = batch.results[0].audit
+        self.assertEqual(len(audit.archives), 1)
+        self.assertEqual(sitemap_redirects(audit), [])
+        self.assertEqual(build(audit).findings, [])
+
+    def test_un_sitio_con_otros_hallazgos_tampoco_lo_genera(self):
+        # ejemplo.test tiene autor duplicado, finos y recategorizables, y
+        # ninguna URL redirigida: el septimo codigo no se contagia.
+        batch = run(["ejemplo.test"], client=FakeClient(routes()))
+        audit = batch.results[0].audit
+        outreach = build(audit)
+        self.assertTrue(outreach.findings)
+        self.assertEqual(sitemap_redirects(audit), [])
+        self.assertNotIn(CODE_REDIRECT, [f.code for f in outreach.findings])
+
+
+class TestLosOtrosAvisosNoSonEsteHallazgo(unittest.TestCase):
+    """Los avisos 1, 2, 4 y 5 no son el sitemap desactualizado.
+
+    La prueba que sostiene la decision de producto: cuatro de las cinco cosas
+    que escriben en `audit.warnings` no se le mandan a la marca, y ninguna de
+    ellas puede colarse como este hallazgo.
+    """
+
+    def setUp(self):
+        self.batch = run(["avisos.test"],
+                         client=FakeClient(rutas_de_los_otros_avisos()))
+        self.audit = self.batch.results[0].audit
+        self.outreach = build(self.audit)
+        self.avisos = " ".join(self.audit.warnings)
+
+    def test_el_escenario_dispara_los_cuatro_avisos_que_no_van(self):
+        # Si este test se cae, el de abajo no prueba nada.
+        self.assertIn("robots.txt no declara el sitemap", self.avisos)
+        self.assertIn("Existe sitemap de category", self.avisos)
+        self.assertIn("Existe sitemap de tag", self.avisos)
+        self.assertIn("propone noindex en las 3 categorias", self.avisos)
+        self.assertIn("son hubs legitimos", self.avisos)
+
+    def test_ninguno_de_esos_avisos_es_una_redireccion(self):
+        self.assertNotIn("redirige a", self.avisos)
+        self.assertEqual(sitemap_redirects(self.audit), [])
+
+    def test_ningun_aviso_de_los_otros_cuatro_genera_este_hallazgo(self):
+        codigos = [f.code for f in self.outreach.findings]
+        self.assertTrue(codigos)  # el sitio si tiene otros hallazgos
+        self.assertNotIn(CODE_REDIRECT, codigos)
+        self.assertNotIn("sitemap desactualizado", self.outreach.markdown.lower())
+
 
 
 if __name__ == "__main__":

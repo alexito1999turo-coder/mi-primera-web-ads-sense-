@@ -9,6 +9,7 @@ para que cambiar de publicador no obligue a reescribir a quien llama.
 
 import inspect
 import unittest
+import urllib.parse
 
 from generator.gates import Draft, GateResult, SEVERITY_BLOCK, SEVERITY_WARN
 from publisher.schema import Publisher, SchemaContext
@@ -122,14 +123,38 @@ class TestShopify(unittest.TestCase):
             f"{TIENDA}/admin/api/{DEFAULT_API_VERSION}/blogs/{BLOG}/articles.json",
         )
 
-    def test_busca_por_handle_antes_de_crear(self):
+    def test_busca_por_handle_y_pide_los_no_publicados(self):
+        # La busqueda existe para no duplicar el articulo en cada ejecucion, y el
+        # modo normal de este adaptador es borrador. Si se deja de pedir
+        # `published_status=any` y el defecto de la API no incluyera los no
+        # publicados, un borrador existente no se encontraria y se crearia otro
+        # cada vez. Por eso la prueba mira la URL que recibe el transporte doble:
+        # quitar el parametro tiene que caerse aqui.
         self.shop.publish(self.draft, GateResult(), CTX)
         method, url, _, _ = self.calls[0]
         self.assertEqual(method, "GET")
+        base, _, query = url.partition("?")
         self.assertEqual(
-            url,
-            f"{TIENDA}/admin/api/{DEFAULT_API_VERSION}/blogs/{BLOG}"
-            "/articles.json?handle=coste",
+            base,
+            f"{TIENDA}/admin/api/{DEFAULT_API_VERSION}/blogs/{BLOG}/articles.json",
+        )
+        # parse_qs y no comparacion de cadena: el orden de los parametros no es
+        # parte del contrato, pero que esten los dos si lo es.
+        self.assertEqual(
+            urllib.parse.parse_qs(query),
+            {"handle": ["coste"], "published_status": ["any"]},
+        )
+
+    def test_el_handle_de_la_busqueda_va_codificado(self):
+        # Un slug con espacios o con `&` no puede romper la query ni colar un
+        # tercer parametro: los dos valores van codificados.
+        self.shop.find_by_slug("coste & plazos/2026")
+        _, url, _, _ = self.calls[0]
+        query = url.partition("?")[2]
+        self.assertNotIn(" ", url)
+        self.assertEqual(
+            urllib.parse.parse_qs(query),
+            {"handle": ["coste & plazos/2026"], "published_status": ["any"]},
         )
 
     def test_la_version_de_api_es_parametrizable(self):

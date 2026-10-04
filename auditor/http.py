@@ -25,6 +25,13 @@ DEFAULT_TIMEOUT = 20
 MAX_BYTES = 3_000_000
 
 
+# Veredictos de redireccion. Tienen nombre porque no se leen solo aqui:
+# `prospeccion` decide con ellos si una URL del sitemap es un hallazgo, y
+# comparar contra un literal repetido en dos paquetes se rompe en silencio.
+REDIRECT_TRAILING_SLASH = "barra final"
+REDIRECT_OTHER_PATH = "otra ruta"
+
+
 @dataclass
 class Response:
     """Respuesta medida. `consulted_at` es la prueba de cuando se midio."""
@@ -64,8 +71,8 @@ class Response:
         if not self.redirected:
             return ""
         if self.final_url.rstrip("/") == self.url.rstrip("/"):
-            return "barra final"
-        return "otra ruta"
+            return REDIRECT_TRAILING_SLASH
+        return REDIRECT_OTHER_PATH
 
     def summary(self) -> str:
         """Linea de verificacion dura para el informe."""

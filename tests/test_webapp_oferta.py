@@ -156,3 +156,41 @@ class TestLosPlanesComoDato(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestElTopeNoEsUnaConstanteCopiada(unittest.TestCase):
+    """El README afirma que el tope lo lee del planificador. Esto lo guarda.
+
+    Las demas pruebas interpolan `CAP_PAGES`, asi que pasarian igual con el 24
+    escrito a mano en la pagina: comprobado rompiendolo a proposito. Una
+    afirmacion del README que ninguna prueba vigila deja de ser cierta sin que
+    nadie se entere, y el README es el documento que no miente.
+    """
+
+    def test_el_tope_de_la_pagina_es_el_del_planificador(self):
+        from clusters.validate import MONTHLY_CAP
+
+        self.assertEqual(CAP_PAGES, MONTHLY_CAP)
+
+    def test_el_tope_se_deriva_y_no_se_copia(self):
+        """Comprobado en el origen, no en el valor.
+
+        Comparar los valores no sirve: los dos son 24 y Python internea los
+        enteros pequenos, asi que `CAP_PAGES = 24` escrito a mano pasa igual
+        que `CAP_PAGES = MONTHLY_CAP`. Lo que el README afirma es de donde sale
+        el numero, y eso solo se ve en la linea que lo asigna.
+        """
+        import inspect
+
+        import webapp.offer as offer
+
+        source = inspect.getsource(offer)
+        self.assertIn("CAP_PAGES = MONTHLY_CAP", source)
+        self.assertNotIn("CAP_PAGES = 24", source)
+
+    def test_ningun_plan_supera_el_tope_del_planificador(self):
+        from clusters.validate import MONTHLY_CAP
+
+        for plan in PLANS:
+            with self.subTest(plan=plan.name):
+                self.assertLess(plan.pages_per_month, MONTHLY_CAP)

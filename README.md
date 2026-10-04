@@ -7,7 +7,7 @@ advertencia al final.
 Referente a batir: BabyLoveGrowth.ai. Se le copia la ingeniería y el modelo
 comercial; se rechazan sus tres pasivos.
 
-**Python 3.11+, cero dependencias.** Solo librería estándar. 460 pruebas,
+**Python 3.11+, cero dependencias.** Solo librería estándar. 476 pruebas,
 ninguna toca la red.
 
 ## La tesis
@@ -165,6 +165,36 @@ Console y **plan de clusters** desde un CSV de keywords.
 Hasta aquí esto eran diez paquetes y una batería de pruebas: un motor, no un
 producto. Su producto se usa sin tocar código; el mío no se podía usar. Esta es
 la carcasa que faltaba.
+
+**Y una ruta más que no es una quinta herramienta.** `/oferta`
+(`webapp/offer.py`) es la página de ventas: qué se vende, a quién, y los tres
+planes. Las cuatro herramientas comparten la portada y cada una tiene su
+endpoint en `/api/`: reciben tus datos y devuelven un resultado. La de oferta no
+mide nada, no tiene formulario ni endpoint propio, y va sin una línea de
+JavaScript porque es texto. No se suman: siguen siendo cuatro herramientas, más
+la página que explica qué se vende.
+
+La sirve el mismo proceso a propósito, y de ahí que estén enlazadas en los dos
+sentidos: la portada de la herramienta abre la oferta, y la oferta enlaza cada
+una de las cuatro por su anchor (`/#auditoria`, `/#citabilidad`,
+`/#oportunidad`, `/#clusters`). Así el precio queda a un clic de la prueba y no
+hay que creerse la página: el banco de pruebas que la está sirviendo es el
+producto del que habla.
+
+**El tope de páginas que anuncia esa página no está escrito en ella.**
+`webapp/offer.py` hace `from clusters.validate import MONTHLY_CAP` y define
+`CAP_PAGES = MONTHLY_CAP`, así que el número que lee el visitante es el que
+aplica por defecto el planificador —el de la prohibición 6— y no una copia
+suya. Una constante duplicada en la página de ventas es la forma de acabar
+prometiendo un volumen que el plan de clusters ya marca como aviso y reparte en
+varios meses. Mismo criterio para el techo de los planes: se calcula como el
+máximo de los planes definidos, no se escribe a mano.
+
+Y la regla de la casa se aplica antes que a nadie a la propia página de ventas:
+su sección de prueba es una tabla de afirmaciones con estado **medido** o **no
+medido** y cómo se comprueba cada una. Las posiciones conseguidas en el sitio de
+un cliente figuran ahí como `no medido`, y no hay logos ni testimonios, porque
+todavía no hay ningún sitio en producción.
 
 Se ata a `127.0.0.1` a propósito, y rechaza auditar direcciones internas
 (`192.168.*`, `10.*`, `localhost`, el endpoint de metadatos) salvo que pases
