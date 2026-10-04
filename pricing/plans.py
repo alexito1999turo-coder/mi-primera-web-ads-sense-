@@ -98,7 +98,7 @@ class Sensibilidad:
         signo = "cae" if self.caida > 0 else "sube"
         aviso = "  <- rompe el plan" if self.rompe else ""
         return (f"{self.palanca}: de {self.desde} a {self.hasta}, el margen "
-                f"{signo} {abs(self.caida):.0f} puntos hasta "
+                f"{signo} {plural(round(abs(self.caida)), 'punto')} hasta "
                 f"{self.margen_despues:.0f}%{aviso}")
 
 

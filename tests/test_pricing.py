@@ -260,3 +260,12 @@ class TestCurvaDeCartera(unittest.TestCase):
         curva = curva_de_cartera(Plan("Regalado", 60, 24), **BASE)
         self.assertIsNone(curva["umbral_clientes"])
         self.assertIn("no es la escala", curva["lectura"])
+
+    def test_un_punto_no_es_un_puntos(self):
+        """El mismo fallo de plural que ya corregi, colado otra vez aqui."""
+        casos = sensibilidad(Plan("Crecimiento", 1290, 24), BASE)
+        reparaciones = [c for c in casos if "Reparaciones" in c.palanca][0]
+        self.assertEqual(round(abs(reparaciones.caida)), 1,
+                         "el caso elegido tiene que caer justo 1 punto")
+        self.assertIn("1 punto hasta", reparaciones.describe())
+        self.assertNotIn("1 puntos", reparaciones.describe())

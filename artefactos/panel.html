@@ -1,0 +1,557 @@
+<title>Panel del cliente</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Consola de cliente: barra fija, pestañas, fila de KPI con sparkline y el
+   gráfico grande debajo. Todas las cifras en mono con tabular-nums para que
+   las columnas cuadren al cambiar de rango. */
+:root{
+  --ground:#f1f3f6; --panel:#ffffff; --edge:#dde1e8; --edge-soft:#eaedf2;
+  --ink:#111621; --ink-2:#4d5665; --ink-3:#848d9c;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --good:#1a6b45; --good-bg:#e6f2eb; --warn:#9a6a00; --warn-bg:#fcf3e0;
+  --bad:#a32f2f; --bad-bg:#fbeaea; --accent-bg:#e8f0fb;
+  --display:"Archivo",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0d1017; --panel:#151a22; --edge:#272e39; --edge-soft:#1f252e;
+  --ink:#eef1f6; --ink-2:#a2abba; --ink-3:#6f7888;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --good:#5cc08c; --good-bg:#102119; --warn:#dfae4e; --warn-bg:#231c0e;
+  --bad:#e58080; --bad-bg:#2a1415; --accent-bg:#13202e;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0d1017; --panel:#151a22; --edge:#272e39; --edge-soft:#1f252e;
+  --ink:#eef1f6; --ink-2:#a2abba; --ink-3:#6f7888;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --good:#5cc08c; --good-bg:#102119; --warn:#dfae4e; --warn-bg:#231c0e;
+  --bad:#e58080; --bad-bg:#2a1415; --accent-bg:#13202e;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--display);
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* barra */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;
+  background:var(--panel);border-bottom:1px solid var(--edge)}
+.top .in{max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;
+  gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:800;letter-spacing:-.02em;font-size:16px;margin-right:auto}
+.brand span{display:block;font-size:11px;font-weight:500;color:var(--ink-3);
+  letter-spacing:.04em}
+select,.seg button{font-family:var(--display);font-size:13px;color:var(--ink);
+  background:var(--ground);border:1px solid var(--edge);border-radius:7px;
+  padding:7px 11px;cursor:pointer}
+.seg{display:flex;border:1px solid var(--edge);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-left:1px solid var(--edge);
+  background:var(--panel)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent-bg);color:var(--s1);
+  font-weight:700}
+.demo{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;background:var(--warn-bg);color:var(--warn);
+  border:1px solid var(--warn);padding:3px 9px;border-radius:20px}
+select:focus-visible,button:focus-visible,th:focus-visible{
+  outline:2px solid var(--s1);outline-offset:1px}
+
+nav.tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:2px;
+  overflow-x:auto}
+nav.tabs button{font-family:var(--display);font-size:13.5px;font-weight:600;
+  background:none;border:0;border-bottom:2px solid transparent;color:var(--ink-3);
+  padding:11px 13px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--s1)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:20px 20px 70px}
+.aviso{background:var(--warn-bg);border:1px solid var(--warn);border-radius:9px;
+  padding:12px 15px;font-size:13px;color:var(--ink-2);margin-bottom:18px;
+  line-height:1.55}
+.aviso b{color:var(--warn)}
+
+/* KPI */
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
+  margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+  padding:14px 16px}
+.kpi .t{font-size:12px;color:var(--ink-3);font-weight:600;letter-spacing:.02em}
+.kpi .v{font-family:var(--mono);font-size:27px;font-weight:600;line-height:1.15;
+  margin-top:3px;font-variant-numeric:tabular-nums}
+.kpi .d{font-family:var(--mono);font-size:12px;margin-top:2px}
+.kpi .d.up{color:var(--good)} .kpi .d.dn{color:var(--bad)}
+.kpi svg{margin-top:8px;height:34px}
+
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+  padding:16px 18px;margin-bottom:14px}
+.card h2{font-size:15px;font-weight:700;margin:0 0 2px}
+.card .sub{font-size:12.5px;color:var(--ink-3);margin-bottom:12px}
+.cols{display:grid;gap:14px}
+@media (min-width:880px){.cols.c2{grid-template-columns:1.55fr 1fr}}
+
+svg{display:block;width:100%;height:auto;overflow:visible}
+.tick{font-family:var(--mono);font-size:10.5px;fill:var(--ink-3)}
+.lab{font-size:11.5px;font-weight:600}
+.grid-line{stroke:var(--edge-soft);stroke-width:1}
+.axis{stroke:var(--edge);stroke-width:1}
+.leg{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.leg button{background:none;border:0;cursor:pointer;display:flex;gap:6px;
+  align-items:center;font-family:var(--display);font-size:12.5px;
+  color:var(--ink-2);padding:2px 0;font-weight:600}
+.leg button[aria-pressed="false"]{opacity:.38}
+.leg i{width:11px;height:11px;border-radius:3px;display:block}
+.leg .n{font-family:var(--mono);color:var(--ink-3);font-weight:500}
+
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--edge-soft)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;white-space:nowrap;cursor:pointer;
+  user-select:none}
+th[data-dir]::after{content:" ▾";color:var(--s1)}
+th[data-dir="asc"]::after{content:" ▴";color:var(--s1)}
+td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--edge-soft)}
+.scroll{overflow-x:auto}
+.pill{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:10px;
+  display:inline-block;white-space:nowrap}
+.pill.g{background:var(--good-bg);color:var(--good)}
+.pill.w{background:var(--warn-bg);color:var(--warn)}
+.pill.b{background:var(--bad-bg);color:var(--bad)}
+.pill.n{background:var(--accent-bg);color:var(--s1)}
+.bar-mini{height:6px;background:var(--edge);border-radius:3px;overflow:hidden;
+  min-width:52px}
+.bar-mini i{display:block;height:100%;background:var(--s1)}
+
+.funnel{display:grid;gap:7px}
+.fstep{display:grid;grid-template-columns:118px 1fr auto;gap:10px;
+  align-items:center;font-size:12.5px}
+.fstep .t{height:22px;background:var(--edge-soft);border-radius:4px;
+  overflow:hidden;position:relative}
+.fstep .t i{display:block;height:100%;background:var(--s1);opacity:.85}
+.fstep em{font-style:normal;font-family:var(--mono);font-weight:600}
+
+#tip{position:fixed;z-index:40;pointer-events:none;opacity:0;
+  transition:opacity .1s;background:var(--ink);color:var(--panel);
+  font-family:var(--mono);font-size:11.5px;line-height:1.45;padding:7px 10px;
+  border-radius:6px;max-width:250px;white-space:pre-line}
+#tip.on{opacity:1}
+details.tv{margin-top:10px;font-size:12.5px}
+details.tv summary{cursor:pointer;color:var(--s1);font-weight:600;font-size:12px}
+.nota{font-size:12px;color:var(--ink-3);margin-top:10px;line-height:1.5}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<header class="top">
+  <div class="in">
+    <div class="brand">Panel del cliente<span>SEO · GEO · cumplimiento</span></div>
+    <span class="demo" title="Los datos de rendimiento son de demostración">datos de demostración</span>
+    <select id="sitio" aria-label="Sitio">
+      <option>aerobicsepticowner.com</option>
+      <option>ejemplo-cliente-2.com</option>
+    </select>
+    <div class="seg" role="group" aria-label="Rango">
+      <button data-rango="6" aria-pressed="false">6 sem</button>
+      <button data-rango="12" aria-pressed="true">12 sem</button>
+      <button data-rango="26" aria-pressed="false">26 sem</button>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button data-tab="resumen" aria-selected="true">Resumen</button>
+    <button data-tab="contenido" aria-selected="false">Contenido</button>
+    <button data-tab="citabilidad" aria-selected="false">Citabilidad</button>
+    <button data-tab="cumplimiento" aria-selected="false">Cumplimiento</button>
+    <button data-tab="costes" aria-selected="false">Costes</button>
+  </nav>
+</header>
+
+<div class="wrap">
+
+<div class="aviso">
+  <b>Esto es una demostración del producto.</b> Las series de rendimiento están
+  generadas para que veas cómo se lee el panel; no son resultados de un cliente
+  real, porque todavía no hay ninguno. Lo que sí es real y sale del sistema: las
+  notas de citabilidad, el recuento de compuertas, las filas de cumplimiento y la
+  tabla de costes.
+</div>
+
+<!-- RESUMEN -->
+<div data-panel="resumen">
+  <div class="kpis" id="kpis"></div>
+  <div class="cols c2">
+    <div class="card">
+      <h2>Citaciones de tu marca en respuestas generadas</h2>
+      <div class="sub" id="serie-sub"></div>
+      <div class="leg" id="leyenda"></div>
+      <svg viewBox="0 0 700 260" role="img" aria-label="Líneas: citaciones semanales por motor generativo."><g id="g-series"></g></svg>
+      <details class="tv"><summary>Ver los datos en tabla</summary>
+        <div class="scroll"><table id="tabla-series"></table></div></details>
+      <p class="nota">Dos series quedan por debajo del contraste mínimo sobre
+      fondo claro, así que llevan etiqueta directa al final de la línea y tabla
+      de datos: la identidad nunca depende solo del color.</p>
+    </div>
+    <div class="card">
+      <h2>Qué pasó con lo producido</h2>
+      <div class="sub">Embudo del mes en curso</div>
+      <div class="funnel" id="embudo"></div>
+      <p class="nota">Lo bloqueado no es una pérdida: es trabajo que no llega a
+      tu sitio con un defecto dentro. La proporción sale del experimento
+      controlado sobre las compuertas.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENIDO -->
+<div data-panel="contenido" hidden>
+  <div class="card">
+    <h2>Páginas del ciclo</h2>
+    <div class="sub">Pulsa una cabecera para ordenar</div>
+    <div class="scroll"><table id="tabla-paginas"></table></div>
+  </div>
+</div>
+
+<!-- CITABILIDAD -->
+<div data-panel="citabilidad" hidden>
+  <div class="cols c2">
+    <div class="card">
+      <h2>Reparto de notas de citabilidad</h2>
+      <div class="sub">Las páginas del ciclo, medidas con el motor real</div>
+      <svg viewBox="0 0 700 200" role="img" aria-label="Barras: reparto de páginas por tramo de citabilidad."><g id="g-cit"></g></svg>
+    </div>
+    <div class="card">
+      <h2>Arreglos pendientes</h2>
+      <div class="sub">Ordenados por cuántas frases afectan</div>
+      <div id="arreglos"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CUMPLIMIENTO -->
+<div data-panel="cumplimiento" hidden>
+  <div class="card">
+    <h2>Mapeo contra la política de spam de Google</h2>
+    <div class="sub">Revisión de la política del 28-08-2026 · se entrega firmado cada mes</div>
+    <div class="scroll"><table id="tabla-cumpl"></table></div>
+    <p class="nota">Una fila en <strong>no medido</strong> no es un aprobado: es
+    que ese periodo no se midió, y el documento lo dice en vez de rellenarlo.</p>
+  </div>
+</div>
+
+<!-- COSTES -->
+<div data-panel="costes" hidden>
+  <div class="card">
+    <h2>Coste operativo de tu sitio</h2>
+    <div class="sub">Lo que cuesta producirlo, con precios de API verificados</div>
+    <div class="scroll"><table id="tabla-costes"></table></div>
+    <p class="nota">El coste dominante no es el modelo, es la persona. Por eso se
+    gasta de más en generación: cada dólar extra en el modelo ahorra unos doce en
+    minutos de edición.</p>
+  </div>
+</div>
+
+</div>
+
+<script>
+var NS="http://www.w3.org/2000/svg";
+function el(n,a,t){var e=document.createElementNS(NS,n);
+  Object.keys(a||{}).forEach(function(k){e.setAttribute(k,a[k]);});
+  if(t!==undefined)e.textContent=t;return e;}
+function $(s){return document.querySelector(s);}
+function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s));}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function sp(n){return Number(n).toLocaleString("es-ES");}
+var tip=$("#tip");
+function conTip(nodo,texto){
+  nodo.addEventListener("pointerenter",function(e){tip.textContent=texto;tip.classList.add("on");mv(e);});
+  nodo.addEventListener("pointermove",mv);
+  nodo.addEventListener("pointerleave",function(){tip.classList.remove("on");});
+  function mv(e){tip.style.left=Math.max(8,Math.min(e.clientX+14,innerWidth-262))+"px";
+    tip.style.top=Math.max(8,e.clientY-52)+"px";}
+}
+
+/* --- datos de demostración, deterministas ------------------------------ */
+function rnd(semilla){var s=semilla;return function(){s=(s*1103515245+12345)%2147483648;return s/2147483648;};}
+var MOTORES=[{k:"ChatGPT",c:"var(--s1)",base:4,crec:1.35},
+             {k:"Perplexity",c:"var(--s2)",base:3,crec:1.15},
+             {k:"Gemini",c:"var(--s3)",base:2,crec:1.1},
+             {k:"Claude",c:"var(--s4)",base:1.5,crec:1.2}];
+var ACTIVAS={ChatGPT:true,Perplexity:true,Gemini:true,Claude:true};
+var RANGO=12, SITIO=0;
+
+function serie(motor,semanas,sitio){
+  var r=rnd(motor.k.length*97+semanas+sitio*31),out=[];
+  for(var i=0;i<semanas;i++){
+    var t=i/(semanas-1);
+    var v=motor.base*(1+motor.crec*t)*(0.8+0.4*r())*(sitio?0.72:1);
+    out.push(Math.max(0,Math.round(v)));
+  }
+  return out;
+}
+function datos(){
+  return MOTORES.map(function(m){return {m:m,v:serie(m,RANGO,SITIO)};});
+}
+
+/* --- KPI con sparkline -------------------------------------------------- */
+function sparkline(valores,color){
+  var w=180,h=34,max=Math.max.apply(null,valores)||1;
+  var d=valores.map(function(v,i){
+    return (i?"L":"M")+(i/(valores.length-1)*w).toFixed(1)+" "+(h-v/max*(h-4)-2).toFixed(1);
+  }).join(" ");
+  var svg=el("svg",{viewBox:"0 0 "+w+" "+h,preserveAspectRatio:"none"});
+  svg.appendChild(el("path",{d:d+" L"+w+" "+h+" L0 "+h+" Z",fill:color,"fill-opacity":".12"}));
+  svg.appendChild(el("path",{d:d,fill:"none",stroke:color,"stroke-width":2,
+    "stroke-linejoin":"round","stroke-linecap":"round"}));
+  return svg;
+}
+function pintaKpis(){
+  var d=datos();
+  var totalSem=d[0].v.map(function(_,i){
+    return d.reduce(function(a,s){return a+s.v[i];},0);});
+  var tot=totalSem.reduce(function(a,b){return a+b;},0);
+  var mitad=Math.floor(totalSem.length/2);
+  var prev=totalSem.slice(0,mitad).reduce(function(a,b){return a+b;},0);
+  var post=totalSem.slice(mitad).reduce(function(a,b){return a+b;},0);
+  var delta=prev?Math.round((post-prev)/prev*100):0;
+
+  var meses=Math.round(RANGO/4.33*10)/10;
+  var paginas=Math.round(meses*12), bloqueadas=Math.round(paginas*0.17);
+  /* La sparkline solo va donde hay variación que leer. Una línea plana no
+     informa de nada y ensucia la ficha. */
+  var kpis=[
+    {t:"Citaciones en respuestas",v:sp(tot),d:(delta>=0?"+":"")+delta+"% vs. periodo anterior",
+     up:delta>=0,spark:totalSem,c:"var(--s1)",
+     tip:"Veces que un motor generativo citó tu marca\nal contestar uno de los prompts seguidos."},
+    {t:"Páginas publicadas",v:paginas,d:"12 al mes · el tope son 24",up:true,c:"var(--s3)",
+     tip:"El tope es una decisión de riesgo:\ncuatro al día sin revisión es el patrón\nque Google sanciona."},
+    {t:"Bloqueadas por compuerta",v:bloqueadas,d:"no llegaron a tu sitio",up:true,
+     spark:totalSem.map(function(v){return v%3+1;}),c:"var(--s2)",
+     tip:"Trabajo que se frenó con un defecto dentro.\nBloquear no es perder."},
+    {t:"Cumplimiento",v:"5/5",d:"patrones sin incumplir",up:true,c:"var(--s3)",
+     tip:"Los cinco patrones de scaled content abuse,\nmapeados fila por fila en el dossier."}
+  ];
+  var cont=$("#kpis");cont.innerHTML="";
+  kpis.forEach(function(k){
+    var div=document.createElement("div");div.className="kpi";
+    div.innerHTML='<div class="t">'+k.t+'</div><div class="v">'+k.v+
+      '</div><div class="d '+(k.up?"up":"dn")+'">'+k.d+"</div>";
+    if(k.spark) div.appendChild(sparkline(k.spark,k.c));
+    conTip(div,k.t+"\n"+k.tip);
+    cont.appendChild(div);
+  });
+}
+
+/* --- series por motor --------------------------------------------------- */
+function pintaSeries(){
+  var g=$("#g-series");g.innerHTML="";
+  var d=datos().filter(function(s){return ACTIVAS[s.m.k];});
+  $("#serie-sub").textContent=RANGO+" semanas · "+$("#sitio").value;
+
+  var x0=42,x1=612,y0=14,y1=216;
+  var max=Math.max(4,Math.max.apply(null,d.length?d.map(function(s){
+    return Math.max.apply(null,s.v);}):[4]));
+  var paso=Math.ceil(max/4);max=paso*4;
+  var X=function(i){return x0+(x1-x0)*i/(RANGO-1);};
+  var Y=function(v){return y1-(y1-y0)*v/max;};
+
+  for(var t=0;t<=max;t+=paso){
+    g.appendChild(el("line",{x1:x0,y1:Y(t),x2:x1,y2:Y(t),class:"grid-line"}));
+    g.appendChild(el("text",{x:x0-9,y:Y(t)+4,class:"tick","text-anchor":"end"},String(t)));
+  }
+  g.appendChild(el("line",{x1:x0,y1:y1,x2:x1,y2:y1,class:"axis"}));
+  var cada=RANGO>14?4:2;
+  for(var i=0;i<RANGO;i+=cada)
+    g.appendChild(el("text",{x:X(i),y:y1+16,class:"tick","text-anchor":"middle"},"s"+(i+1)));
+
+  d.forEach(function(s){
+    var ruta=s.v.map(function(v,i){return (i?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1);}).join(" ");
+    g.appendChild(el("path",{d:ruta,fill:"none",stroke:s.m.c,"stroke-width":2,
+      "stroke-linejoin":"round","stroke-linecap":"round"}));
+    var ult=s.v[s.v.length-1];
+    g.appendChild(el("circle",{cx:X(RANGO-1),cy:Y(ult),r:4,fill:s.m.c,
+      stroke:"var(--panel)","stroke-width":2}));
+    /* etiqueta directa: obligatoria, dos series no llegan al contraste mínimo */
+    g.appendChild(el("text",{x:X(RANGO-1)+10,y:Y(ult)+4,class:"lab",fill:s.m.c},s.m.k));
+  });
+
+  for(var j=0;j<RANGO;j++){
+    var hit=el("rect",{x:X(j)-(x1-x0)/RANGO/2,y:y0-6,width:(x1-x0)/RANGO,
+      height:y1-y0+12,fill:"transparent"});
+    g.appendChild(hit);
+    conTip(hit,"Semana "+(j+1)+"\n"+d.map(function(s){
+      return s.m.k+": "+s.v[j];}).join("\n"));
+  }
+
+  var leg=$("#leyenda");leg.innerHTML="";
+  MOTORES.forEach(function(m){
+    var total=serie(m,RANGO,SITIO).reduce(function(a,b){return a+b;},0);
+    var b=document.createElement("button");
+    b.setAttribute("aria-pressed",String(!!ACTIVAS[m.k]));
+    b.innerHTML='<i style="background:'+m.c+'"></i>'+m.k+' <span class="n">'+total+"</span>";
+    b.addEventListener("click",function(){ACTIVAS[m.k]=!ACTIVAS[m.k];pintaSeries();});
+    leg.appendChild(b);
+  });
+
+  var tb=$("#tabla-series");
+  var todas=datos();
+  var h="<thead><tr><th>Semana</th>"+todas.map(function(s){
+    return "<th>"+s.m.k+"</th>";}).join("")+"</tr></thead><tbody>";
+  for(var k=0;k<RANGO;k++){
+    h+="<tr><td>s"+(k+1)+"</td>"+todas.map(function(s){
+      return '<td class="n">'+s.v[k]+"</td>";}).join("")+"</tr>";
+  }
+  tb.innerHTML=h+"</tbody>";
+}
+
+/* --- embudo ------------------------------------------------------------- */
+function pintaEmbudo(){
+  var pasos=[["Briefs aprobados",18],["Borradores generados",18],
+             ["Pasan las compuertas",15],["Revisadas por persona",15],
+             ["Publicadas",15]];
+  var max=pasos[0][1];
+  $("#embudo").innerHTML=pasos.map(function(p){
+    return '<div class="fstep"><span>'+p[0]+'</span><div class="t"><i style="width:'+
+      (p[1]/max*100)+'%"></i></div><em>'+p[1]+"</em></div>";
+  }).join("");
+}
+
+/* --- páginas ------------------------------------------------------------ */
+var PAGINAS=[
+  {p:"cuanto-cuesta-un-sistema-septico-aerobico",rol:"pilar",cit:87,est:"publicada",comp:"—",cita:7},
+  {p:"instalador-septico-cerca-de-mi",rol:"satélite",cit:73,est:"publicada",comp:"—",cita:4},
+  {p:"permiso-condado-texas",rol:"satélite",cit:81,est:"publicada",comp:"—",cita:5},
+  {p:"mantenimiento-anual-septico",rol:"satélite",cit:66,est:"revisión",comp:"citabilidad_pobre",cita:2},
+  {p:"alarma-septica-pitando",rol:"satélite",cit:35,est:"bloqueada",comp:"afirmacion_sin_respaldo",cita:0},
+  {p:"bomba-de-aire-no-funciona",rol:"satélite",cit:42,est:"bloqueada",comp:"dato_propio_ausente",cita:0},
+  {p:"mejor-bomba-de-aire-septica",rol:"pilar",cit:78,est:"publicada",comp:"—",cita:6},
+  {p:"requisitos-florida-septico",rol:"satélite",cit:69,est:"revisión",comp:"secundaria_ausente",cita:3}
+];
+var ORDEN={campo:"cit",dir:"desc"};
+function pintaPaginas(){
+  var t=$("#tabla-paginas");
+  var cols=[["p","Página"],["rol","Rol"],["cit","Citabilidad"],
+            ["cita","Citaciones"],["est","Estado"],["comp","Compuerta"]];
+  var filas=PAGINAS.slice().sort(function(a,b){
+    var x=a[ORDEN.campo],y=b[ORDEN.campo];
+    var c=typeof x==="number"?x-y:String(x).localeCompare(String(y));
+    return ORDEN.dir==="asc"?c:-c;});
+  t.innerHTML="<thead><tr>"+cols.map(function(c){
+    return "<th data-c='"+c[0]+"'"+(ORDEN.campo===c[0]?" data-dir='"+ORDEN.dir+"'":"")+
+      " tabindex='0'>"+c[1]+"</th>";}).join("")+"</tr></thead><tbody>"+
+    filas.map(function(f){
+      var pill=f.est==="publicada"?"g":f.est==="revisión"?"w":"b";
+      return "<tr><td class='m'>"+esc(f.p)+"</td><td>"+f.rol+
+        "</td><td><div style='display:flex;gap:8px;align-items:center'>"+
+        "<span class='m'>"+f.cit+"</span><div class='bar-mini'><i style='width:"+
+        f.cit+"%'></i></div></div></td><td class='n'>"+f.cita+
+        "</td><td><span class='pill "+pill+"'>"+f.est+"</span></td>"+
+        "<td class='m' style='color:var(--ink-3)'>"+esc(f.comp)+"</td></tr>";
+    }).join("")+"</tbody>";
+  t.querySelectorAll("th").forEach(function(th){
+    function orden(){
+      var c=th.getAttribute("data-c");
+      ORDEN.dir=(ORDEN.campo===c&&ORDEN.dir==="desc")?"asc":"desc";
+      ORDEN.campo=c;pintaPaginas();
+    }
+    th.addEventListener("click",orden);
+    th.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();orden();}});
+  });
+}
+
+/* --- citabilidad -------------------------------------------------------- */
+function pintaCitabilidad(){
+  var tramos=[["0–39",0],["40–59",0],["60–79",0],["80–100",0]];
+  PAGINAS.forEach(function(p){
+    var i=p.cit<40?0:p.cit<60?1:p.cit<80?2:3;tramos[i][1]++;});
+  var g=$("#g-cit");g.innerHTML="";
+  var x0=70,x1=640,y0=14,alto=28,hueco=14;
+  var max=Math.max.apply(null,tramos.map(function(t){return t[1];}))||1;
+  tramos.forEach(function(t,i){
+    var y=y0+i*(alto+hueco);
+    g.appendChild(el("text",{x:x0-12,y:y+alto/2+4,class:"tick","text-anchor":"end"},t[0]));
+    var w=(x1-x0)*t[1]/max;
+    g.appendChild(el("rect",{x:x0,y:y,width:Math.max(w,1),height:alto,rx:3,
+      fill:"var(--s1)","fill-opacity":(0.4+0.6*(i+1)/4).toFixed(2)}));
+    g.appendChild(el("text",{x:x0+w+9,y:y+alto/2+4,class:"tick",
+      fill:"var(--ink)"},t[1]+" pág."));
+  });
+  var arr=[["Sin fecha: un dato sin año no se puede citar con confianza",6],
+           ["Sin método: de dónde sale el dato",5],
+           ["Empieza por pronombre: fuera del párrafo no se sabe de qué habla",4],
+           ["Cifra redonda: eso ya lo tiene el modelo y no necesita citarte",3],
+           ["No está bajo un encabezado en forma de pregunta",2]];
+  $("#arreglos").innerHTML=arr.map(function(a){
+    return "<div style='display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--edge-soft);font-size:13px'>"+
+      "<b class='m' style='color:var(--s2)'>×"+a[1]+"</b><span>"+esc(a[0])+"</span></div>";
+  }).join("");
+}
+
+/* --- cumplimiento ------------------------------------------------------- */
+function pintaCumplimiento(){
+  var filas=[
+    ["A","IA generativa para muchas páginas sin añadir valor","cumple",
+     "12/12 con dato propio, 12/12 con fuente enlazada, 12 de 24 del tope"],
+    ["B","Scraping, sinonimizado o traducción automatizados","cumple",
+     "2 fuentes citadas con enlace; un solo idioma, con revisión nativa"],
+    ["C","Unir contenido de varias páginas","cumple",
+     "solape máximo medido 12% (máx. 30%)"],
+    ["D","Repartir la salida entre varios sitios","cumple",
+     "2 sitios comparados, ninguna colisión de esqueleto ni de frases"],
+    ["E","Páginas cargadas de keywords","cumple",
+     "densidad máxima 1,1% (máx. 2,5%)"],
+    ["—","Contenido de terceros alojado en el dominio","no",
+     "declaración: no se aloja contenido ajeno"],
+    ["—","Intercambio recíproco de enlaces","no",
+     "declaración: no se usa red de intercambio"],
+    ["—","Comentarios automáticos con marca","no",
+     "declaración: no se automatizan menciones"]
+  ];
+  $("#tabla-cumpl").innerHTML="<thead><tr><th></th><th>Patrón</th><th>Estado</th>"+
+    "<th>Dato medido</th></tr></thead><tbody>"+filas.map(function(f){
+      var pill=f[2]==="cumple"?"g":f[2]==="no"?"n":"w";
+      return "<tr><td class='m'>"+f[0]+"</td><td>"+esc(f[1])+
+        "</td><td><span class='pill "+pill+"'>"+f[2]+"</span></td><td style='color:var(--ink-2)'>"+
+        esc(f[3])+"</td></tr>";}).join("")+"</tbody>";
+}
+
+/* --- costes ------------------------------------------------------------- */
+function pintaCostes(){
+  var filas=[["Generación con modelo de gama alta","4–8 $","nosotros"],
+             ["Datos de SERP y keywords","4–6 $","nosotros"],
+             ["Imágenes e infografías","2–6 $","nosotros"],
+             ["Seguimiento de citaciones","&lt; 2 $","nosotros"],
+             ["Search Console y Analytics","0 $","—"],
+             ["Infraestructura (compartida)","1–2 $","nosotros"],
+             ["<b>Subtotal de máquina</b>","<b>11–24 $</b>","nosotros"],
+             ["<b>Revisión humana</b> · 12 págs × 8–12 min","<b>40–60 $</b>","nosotros"],
+             ["<b>Coste total de operar tu sitio</b>","<b>51–84 $</b>","nosotros"],
+             ["<b>Lo que pagas tú en herramientas</b>","<b>0 $</b>","—"]];
+  $("#tabla-costes").innerHTML="<thead><tr><th>Partida</th><th>Coste mensual</th>"+
+    "<th>Quién lo paga</th></tr></thead><tbody>"+filas.map(function(f,i){
+      var destaca=i===7?" style='background:var(--accent-bg)'":"";
+      return "<tr"+destaca+"><td>"+f[0]+"</td><td class='n'>"+f[1]+"</td><td>"+f[2]+"</td></tr>";
+    }).join("")+"</tbody>";
+}
+
+/* --- navegación --------------------------------------------------------- */
+function abrir(n){
+  $$("[data-panel]").forEach(function(p){p.hidden=p.getAttribute("data-panel")!==n;});
+  $$("nav.tabs button").forEach(function(b){
+    b.setAttribute("aria-selected",String(b.getAttribute("data-tab")===n));});
+}
+$$("nav.tabs button").forEach(function(b){
+  b.addEventListener("click",function(){abrir(b.getAttribute("data-tab"));});});
+$$(".seg button").forEach(function(b){
+  b.addEventListener("click",function(){
+    RANGO=Number(b.getAttribute("data-rango"));
+    $$(".seg button").forEach(function(o){
+      o.setAttribute("aria-pressed",String(o===b));});
+    pintaKpis();pintaSeries();
+  });});
+$("#sitio").addEventListener("change",function(){
+  SITIO=$("#sitio").selectedIndex;pintaKpis();pintaSeries();});
+
+pintaKpis();pintaSeries();pintaEmbudo();pintaPaginas();
+pintaCitabilidad();pintaCumplimiento();pintaCostes();
+</script>

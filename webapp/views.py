@@ -730,9 +730,10 @@ function pintarTarifa(r){
   Object.keys(r.sensibilidad).forEach(function(nombre){
     h += "<h4>" + esc(nombre) + "</h4><ul>";
     r.sensibilidad[nombre].forEach(function(c){
+      var pts = Math.round(Math.abs(c.caida));
       h += "<li>" + esc(c.palanca) + ": de " + esc(c.desde) + " a " +
         esc(c.hasta) + ", el margen " + (c.caida > 0 ? "cae " : "sube ") +
-        Math.abs(c.caida).toFixed(0) + " puntos hasta " +
+        pts + (pts === 1 ? " punto" : " puntos") + " hasta " +
         c.despues.toFixed(0) + "%" +
         (c.rompe ? ' <b class="mal">rompe el plan</b>' : "") + "</li>";
     });

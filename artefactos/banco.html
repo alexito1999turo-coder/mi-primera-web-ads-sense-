@@ -1,0 +1,1744 @@
+<title>Banco de pruebas SEO-GEO</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Banco de instrumentos: una columna, cada seccion un aparato de medida.
+   Las cifras medidas van en mono ambar; las redondeadas, en gris. Es el
+   hallazgo del motor convertido en tipografia. */
+:root{
+  --ground:#f3f4f6; --panel:#ffffff; --edge:#d7dbe2;
+  --ink:#171c26; --ink-soft:#5a6376; --ink-faint:#8b94a6;
+  --measured:#9a5b00; --measured-bg:#fdf3e3;
+  --signal:#1d5fb4; --signal-bg:#e8f0fb;
+  --good:#1a6b45; --warn:#9a6a00; --bad:#a32f2f;
+  --good-bg:#e6f2eb; --warn-bg:#fcf3e0; --bad-bg:#fbeaea;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --ground:#0f1319; --panel:#171c24; --edge:#2b323d;
+  --ink:#e6eaf1; --ink-soft:#9aa3b4; --ink-faint:#6b7486;
+  --measured:#e5a953; --measured-bg:#2a2013;
+  --signal:#6fa8e8; --signal-bg:#15212f;
+  --good:#5cc08c; --warn:#dfae4e; --bad:#e58080;
+  --good-bg:#122218; --warn-bg:#241c0d; --bad-bg:#2a1414;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0f1319; --panel:#171c24; --edge:#2b323d;
+  --ink:#e6eaf1; --ink-soft:#9aa3b4; --ink-faint:#6b7486;
+  --measured:#e5a953; --measured-bg:#2a2013;
+  --signal:#6fa8e8; --signal-bg:#15212f;
+  --good:#5cc08c; --warn:#dfae4e; --bad:#e58080;
+  --good-bg:#122218; --warn-bg:#241c0d; --bad-bg:#2a1414;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:880px;margin:0 auto;padding-inline:20px;padding-block:40px 64px}
+h1,h2,h3{font-family:var(--cond);font-weight:700;line-height:1.15;
+  text-wrap:balance;margin:0}
+h1{font-size:clamp(29px,5.6vw,44px);letter-spacing:-.015em}
+h2{font-size:clamp(20px,3.4vw,26px);margin-block:0 6px}
+h3{font-size:16px;font-family:var(--sans);font-weight:600}
+p{margin:0 0 14px}
+.lede{font-size:clamp(16px,2.2vw,18px);color:var(--ink-soft);max-width:62ch}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);
+  margin-bottom:8px}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums}
+section{margin-top:44px}
+.panel{background:var(--panel);border:1px solid var(--edge);border-radius:8px;
+  padding:20px;margin-top:16px}
+.note{font-size:13px;color:var(--ink-faint);max-width:72ch}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:18px}
+nav.tabs button{font:inherit;font-size:13px;cursor:pointer;padding:9px 15px;
+  border:1px solid var(--edge);background:var(--panel);color:var(--ink-soft);
+  border-radius:6px}
+nav.tabs button[aria-selected="true"]{background:var(--signal-bg);
+  border-color:var(--signal);color:var(--signal);font-weight:600}
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+textarea,input[type=number]{width:100%;font-family:var(--mono);font-size:13px;
+  line-height:1.55;padding:11px;border:1px solid var(--edge);border-radius:6px;
+  background:var(--ground);color:var(--ink)}
+textarea{min-height:160px;resize:vertical}
+input[type=number]{max-width:130px;font-family:var(--sans)}
+textarea:focus-visible,input:focus-visible,button:focus-visible{
+  outline:2px solid var(--signal);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end;margin-top:12px}
+button{font-family:var(--sans);font-size:13px;cursor:pointer;padding:9px 15px;
+  border-radius:6px;border:1px solid var(--edge);background:var(--panel);
+  color:var(--ink)}
+button.primary{background:var(--signal);border-color:var(--signal);color:#fff;
+  font-weight:600;font-size:14px;padding:10px 18px}
+button[aria-pressed="true"]{background:var(--signal-bg);border-color:var(--signal);
+  color:var(--signal);font-weight:600}
+.tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));
+  margin:16px 0 14px}
+.tile{background:var(--panel);border:1px solid var(--edge);border-radius:8px;
+  padding:13px 15px;min-width:0}
+.tile b,.tile .num{display:block;font-family:var(--mono);font-size:25px;
+  font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;
+  /* sin esto, el simbolo de porcentaje cae a la linea siguiente en las
+     fichas estrechas y la cifra parece rota */
+  white-space:nowrap}
+/* Selector acotado a proposito. `.tile span` alcanzaba cualquier span dentro
+   de la ficha, incluido el del simbolo de porcentaje dentro de la cifra, y lo
+   convertia en bloque: el `%` caia a la linea de abajo y la cifra parecia
+   rota. No era un salto de linea, era especificidad. */
+.tile .cap,.tile > b + span{display:block;font-size:12px;color:var(--ink-soft);
+  margin-top:4px}
+.bars{display:grid;gap:7px;margin:14px 0}
+.fb{display:grid;grid-template-columns:116px 1fr 38px;gap:10px;align-items:center;
+  font-size:12px}
+.fb .t{height:7px;background:var(--edge);border-radius:4px;overflow:hidden}
+.fb .t i{display:block;height:100%;background:var(--signal);
+  transition:width .35s ease}
+.fb em{font-style:normal;font-family:var(--mono);text-align:right;
+  color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.quote{border-left:3px solid var(--good);background:var(--good-bg);
+  padding:10px 12px;border-radius:0 6px 6px 0;margin-top:10px;font-size:13px}
+.quote.no{border-left-color:var(--bad);background:var(--bad-bg)}
+.quote .tag{font-family:var(--mono);font-size:11px;color:var(--ink-soft);
+  display:block;margin-bottom:5px}
+.quote ul{margin:7px 0 0;padding-left:18px;color:var(--ink-soft)}
+.fix{display:flex;gap:9px;font-size:13px;padding:7px 0;
+  border-bottom:1px solid var(--edge)}
+.fix:last-child{border-bottom:0}
+.fix b{font-family:var(--mono);color:var(--measured);flex:0 0 auto}
+.err{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad);
+  padding:11px 13px;border-radius:6px;font-size:14px;margin-top:12px}
+.scroll{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--edge);
+  vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-faint);font-weight:500;
+  white-space:nowrap}
+td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+tr.hub td{background:var(--good-bg)}
+.pill{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:10px;
+  white-space:nowrap;display:inline-block}
+.pill.g{background:var(--good-bg);color:var(--good)}
+.pill.w{background:var(--warn-bg);color:var(--warn)}
+.pill.b{background:var(--bad-bg);color:var(--bad)}
+.pill.n{background:var(--signal-bg);color:var(--signal)}
+ol.rank{list-style:none;padding:0;margin:14px 0 0;counter-reset:r;display:grid;
+  gap:7px}
+ol.rank li{counter-increment:r;display:grid;grid-template-columns:26px 1fr auto;
+  gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--edge);
+  border-radius:6px;background:var(--panel);font-size:13px;min-width:0}
+ol.rank li::before{content:counter(r);font-family:var(--mono);font-weight:600;
+  color:var(--ink-faint)}
+ol.rank li .v{font-family:var(--mono);font-variant-numeric:tabular-nums;
+  font-weight:600;white-space:nowrap}
+ol.rank li.up{border-color:var(--good);background:var(--good-bg)}
+ol.rank li.down{border-color:var(--bad);background:var(--bad-bg)}
+ul.rules{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:9px}
+ul.rules li{display:grid;grid-template-columns:22px 1fr;gap:10px;font-size:14px}
+ul.rules li span{font-family:var(--mono);color:var(--bad);font-weight:600}
+.action{border-left:3px solid var(--warn);background:var(--warn-bg);
+  padding:11px 13px;border-radius:0 6px 6px 0;margin-top:10px;font-size:13px}
+.foot{margin-top:46px;padding-top:20px;border-top:1px solid var(--edge);
+  font-size:13px;color:var(--ink-soft)}
+.grid{display:grid;gap:12px}
+@media (min-width:620px){
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+}
+table.eco{width:100%;border-collapse:collapse;font-size:13px;min-width:460px}
+table.eco th{text-align:left;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);font-weight:600;padding:0 6px 4px}
+table.eco td{padding:3px 6px}
+table.eco input{width:100%;font:inherit;font-size:13px;padding:7px 9px;
+  border:1px solid var(--edge);border-radius:5px;background:var(--ground);
+  color:var(--ink)}
+table.eco td{border-bottom:none}
+.rep{display:inline-flex;width:86px;height:9px;border-radius:5px;
+  overflow:hidden;vertical-align:middle;margin-right:7px;
+  border:1px solid var(--edge)}
+.rep i{display:block;height:100%}
+.rep i:nth-child(1){background:var(--signal)}
+.rep i:nth-child(2){background:var(--measured)}
+.rep i:nth-child(3){background:var(--ink-faint)}
+ul.lista{margin:10px 0 0;padding-left:20px;font-size:14px;
+  color:var(--ink-soft);line-height:1.55}
+ul.lista li{margin-bottom:6px}
+ul.lista b{color:var(--ink);font-weight:600}
+.rompe{color:var(--bad);font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<p class="eyebrow">Banco de pruebas · cuatro herramientas funcionando aquí mismo</p>
+<h1>Un buscador no cita páginas.<br>Cita frases.</h1>
+<p class="lede">La competencia <em>rastrea</em> citaciones en ChatGPT, Perplexity,
+Gemini y Claude. Eso es un termómetro: dice lo que ya pasó. Este sistema mide qué
+hace que una frase se pueda citar, y lo dice antes de publicar.</p>
+
+<div class="tiles" style="margin-top:22px">
+  <div class="tile"><b>12</b><span>módulos construidos</span></div>
+  <div class="tile"><b>315</b><span>pruebas en tres niveles</span></div>
+  <div class="tile"><b>0</b><span>dependencias externas</span></div>
+</div>
+
+<section>
+  <p class="eyebrow">Úsalas · no hay nada que instalar</p>
+  <h2>Las cuatro herramientas corren en esta página</h2>
+  <p class="note">No son capturas ni una demo grabada. Son los mismos motores del
+  sistema, portados a esta página y verificados contra la versión en Python: dan
+  exactamente las mismas cifras sobre los mismos datos. Cambia el texto o pega tus
+  propios CSV y responden al momento.</p>
+  
+<nav class="tabs" role="tablist">
+  <button data-tab="citabilidad" aria-selected="true">Citabilidad</button>
+  <button data-tab="oportunidad" aria-selected="false">Oportunidad</button>
+  <button data-tab="clusters" aria-selected="false">Plan de clusters</button>
+  <button data-tab="datos" aria-selected="false">Datos propios</button>
+  <button data-tab="economia" aria-selected="false">Economía</button>
+</nav>
+
+<div data-panel="citabilidad">
+  <div class="panel">
+    <h3>Qué frases puede citar un buscador</h3>
+    <p class="note">Pega cualquier texto en markdown. Mide las cuatro condiciones
+    que hacen citable una frase y lista las concretas, con el arreglo que le falta
+    a cada una de las demás.</p>
+    <label for="cit-text">Texto</label>
+    <textarea id="cit-text" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="primary" id="cit-go" type="button">Medir</button>
+      <button type="button" data-load="bueno">Ejemplo citable</button>
+      <button type="button" data-load="malo">Ejemplo no citable</button>
+    </div>
+  </div>
+  <div id="cit-out"></div>
+</div>
+
+<div data-panel="oportunidad" hidden>
+  <div class="panel">
+    <h3>Dónde está la oportunidad de verdad</h3>
+    <p class="note">Pega tu exportación de Search Console. Necesita columna de
+    consulta o página, impresiones y posición. Descuenta lo que se queda la
+    respuesta generada y ordena por valor esperado, no por clics.</p>
+    <label for="opo-csv">CSV de Search Console</label>
+    <textarea id="opo-csv" spellcheck="false"></textarea>
+    <div class="row"><button class="primary" id="opo-go" type="button">Analizar</button></div>
+  </div>
+  <div id="opo-out"></div>
+</div>
+
+<div data-panel="clusters" hidden>
+  <div class="panel">
+    <h3>Plan de contenido con solape cero</h3>
+    <p class="note">Pega un CSV de keywords de Semrush, Ahrefs, DataForSEO o
+    escrito a mano. Agrupa en clusters, asigna pilares y satélites sin repetir
+    ninguna keyword primaria, y reparte en meses respetando el tope.</p>
+    <label for="clu-csv">CSV de keywords</label>
+    <textarea id="clu-csv" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="primary" id="clu-go" type="button">Planificar</button>
+      <div><label for="clu-cap">Tope mensual</label>
+        <input type="number" id="clu-cap" value="24" min="1" max="120"></div>
+    </div>
+    <p class="note" style="margin-top:10px">El tope de 24 es una decisión de
+    riesgo, no una limitación técnica: cuatro páginas al día en un dominio sin
+    revisión es el patrón que Google penaliza como scaled content abuse.</p>
+  </div>
+  <div id="clu-out"></div>
+</div>
+
+<div data-panel="datos" hidden>
+  <div class="panel">
+    <h3>De números en bruto a una cifra que se puede citar</h3>
+    <p class="note">Pega observaciones con su procedencia: valor, fuente, fecha
+    y método. Agrega, calcula la cifra, escribe la frase citable y <strong>se
+    niega</strong> a publicar lo que tenga muestra insuficiente. Es lo que
+    alimenta el dato propio que el generador exige, y el activo enlazable que
+    sustituye a una red de intercambio de enlaces.</p>
+    <label for="dat-csv">Observaciones (valor, unidad, fuente, fecha, metodo, + dimensiones)</label>
+    <textarea id="dat-csv" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="primary" id="dat-go" type="button">Agregar</button>
+      <div style="flex:1 1 260px"><label for="dat-sujeto">Sujeto de la frase</label>
+        <input type="text" id="dat-sujeto" value="El coste de instalacion de un sistema septico aerobico"
+               style="width:100%;font-family:var(--sans);font-size:14px;padding:9px 11px;border:1px solid var(--edge);border-radius:6px;background:var(--ground);color:var(--ink)"></div>
+      <div><label for="dat-dim">Agrupar por</label>
+        <input type="text" id="dat-dim" value="condado"
+               style="max-width:140px;font-family:var(--sans);font-size:14px;padding:9px 11px;border:1px solid var(--edge);border-radius:6px;background:var(--ground);color:var(--ink)"></div>
+      <div><label for="dat-est">Estadistico</label>
+        <select id="dat-est" style="font-family:var(--sans);font-size:14px;padding:9px 11px;border:1px solid var(--edge);border-radius:6px;background:var(--ground);color:var(--ink)">
+          <option value="mediana">Mediana</option>
+          <option value="media">Media</option>
+          <option value="p75">Percentil 75</option>
+          <option value="recuento">Recuento</option>
+        </select></div>
+    </div>
+  </div>
+  <div id="dat-out"></div>
+</div>
+<div data-panel="economia" hidden>
+  <div class="panel">
+    <h3>Qué cuesta cada página y dónde está el margen de verdad</h3>
+    <p class="note">Un precio que no sale de un coste medido es una cifra de
+    folleto: dura hasta el primer cliente que pide veinte páginas al mes. Esto
+    calcula el coste por sus partes con el consumo real de tokens, y dice
+    <strong>cuál de ellas manda</strong> y qué pasa al moverla. Es el mismo
+    motor que corre en el sistema, comprobado contra él caso por caso.</p>
+
+    <div class="scroll"><table id="eco-planes" class="eco">
+      <thead><tr><th>Plan</th><th>Precio/mes</th><th>Páginas</th><th>Min. revisión</th></tr></thead>
+      <tbody>
+        <tr data-plan><td><input type="text" value="Core"></td>
+          <td><input type="number" value="299" min="0" step="10"></td>
+          <td><input type="number" value="12" min="1" step="1"></td>
+          <td><input type="number" value="12" min="0" step="1"></td></tr>
+        <tr data-plan><td><input type="text" value="Scale"></td>
+          <td><input type="number" value="699" min="0" step="10"></td>
+          <td><input type="number" value="24" min="1" step="1"></td>
+          <td><input type="number" value="12" min="0" step="1"></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="row" style="margin-top:12px">
+      <div><label for="eco-hora">Coste/hora de revisión</label>
+        <input type="number" id="eco-hora" value="45" min="0" step="1"></div>
+      <div><label for="eco-herr">Herramientas/mes</label>
+        <input type="number" id="eco-herr" value="120" min="0" step="10"></div>
+      <div><label for="eco-rep">Reparaciones/página</label>
+        <input type="number" id="eco-rep" value="0.6" min="0" step="0.1"></div>
+      <div><label for="eco-cartera">Páginas/mes en toda la cartera</label>
+        <input type="number" id="eco-cartera" value="300" min="0" step="10"></div>
+      <div><label for="eco-fijos">Estructura/mes</label>
+        <input type="number" id="eco-fijos" value="4000" min="0" step="100"></div>
+    </div>
+    <p class="note" style="margin-top:10px">Las <strong>páginas de cartera</strong>
+    son el detalle que más cambia el resultado, y el que yo mismo tenía mal: las
+    herramientas son coste fijo del <em>negocio</em>, no del cliente. Ponlo a 0
+    para ver qué pasa cuando solo tienes un cliente.</p>
+  </div>
+  <div id="eco-out"></div>
+</div>
+
+
+
+</section>
+
+<section>
+  <p class="eyebrow">El producto</p>
+  <h2>Ya se puede usar sin tocar código</h2>
+  <p class="note">Esta página es la demo. Lo que hay detrás es una aplicación que se levanta con una línea y sirve las cuatro herramientas en el navegador: auditoría de un dominio en vivo con barra de progreso, citabilidad de un texto, oportunidad desde una exportación de Search Console y plan de clusters desde un CSV de keywords.</p>
+  <div class="panel">
+    <p class="eyebrow">En tu máquina</p>
+    <p style="font-family:var(--mono);font-size:14px;background:var(--ground);border:1px solid var(--edge);border-radius:6px;padding:12px;margin:8px 0 14px;overflow-x:auto">python3 -m webapp&nbsp; → &nbsp;http://127.0.0.1:8000</p>
+    <p class="note" style="margin-bottom:0">Sin instalar nada, sin dependencias y sin enviar datos a ningún sitio. Se ata a <span class="m">127.0.0.1</span> y rechaza auditar direcciones internas salvo que lo pidas explícitamente: sin ese guardia, la herramienta sería un escáner de la red de quien la levanta.</p>
+  </div>
+  <p class="note">La auditoría corre en un hilo y la página pregunta por el progreso. No es un detalle de interfaz: una auditoría educada, con segundo y medio entre peticiones, tarda medio minuto, y bloquear la petición HTTP ese rato da una página colgada y un navegador que agota el tiempo. Es la diferencia entre una demo y algo usable.</p>
+</section>
+
+<section>
+  <p class="eyebrow">Instrumento 2 · auditoría</p>
+  <h2>Lo que encontró contra HTTP real</h2>
+  <p class="note">Levanté un servidor que sirve HTML de tema de WordPress — nav, aside, footer, comentarios de Yoast, gzip, redirección canónica — y pasé el auditor por la red de verdad. Hasta ahora estaba verificado con dobles dentro del proceso, lo cual prueba la lógica y nada del transporte. <span class="m">12 peticiones, 0,6 s</span>.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Archivo</th><th>Indexable</th><th class="n">Posts</th><th class="n">Palabras</th><th>Veredicto</th><th>Acción</th></tr></thead>
+    <tbody>
+      <tr><td class="m">/author/alexyter/</td><td>sí</td><td class="n">10</td><td class="n">1002</td><td><span class="pill b">duplicado</span></td><td>Desactivar el archivo</td></tr>
+      <tr><td class="m">/category/costes/</td><td>sí</td><td class="n">2</td><td class="n">290</td><td><span class="pill w">fino</span></td><td>Recategorizar</td></tr>
+      <tr><td class="m">/category/alarmas/</td><td>sí</td><td class="n">1</td><td class="n">187</td><td><span class="pill w">fino</span></td><td>Recategorizar</td></tr>
+      <tr><td class="m">/category/florida/</td><td>sí</td><td class="n">1</td><td class="n">180</td><td><span class="pill w">fino</span></td><td>Recategorizar</td></tr>
+      <tr class="hub"><td class="m">/category/mantenimiento/</td><td>sí</td><td class="n">6</td><td class="n">940</td><td><span class="pill g">hub</span></td><td>Intacto</td></tr>
+      <tr><td class="m">/tag/urgencias/</td><td>no (noindex)</td><td class="n">1</td><td class="n">110</td><td><span class="pill w">fino</span></td><td>Nada: ya no compite</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="panel" style="margin-top:0">
+      <h3>Recategorizar antes que ocultar</h3>
+      <p class="note" style="margin-top:6px">Para <span class="m">/category/alarmas/</span> detectó dos artículos huérfanos reasignables por solape de términos con el sitemap. Pero el umbral de hub pide cinco, así que el informe dice la verdad incómoda: <em>«reasignarlos deja el archivo a 3 artículos de ser un hub real; mientras tanto sigue siendo fino»</em>. La primera versión prometía el hub. Lo corregí porque ese informe es el artefacto con el que se vende.</p>
+    </div>
+    <div class="panel" style="margin-top:0">
+      <h3>El hub no se toca</h3>
+      <p class="note" style="margin-top:6px">Seis artículos y 940 palabras es estructura que Google premia. Hay una guarda explícita: si la regla propusiera noindex en todas las categorías, el informe lo marca y exige revisión manual. Ocultarlas todas destruye los silos, y es el error de bulto que comete cualquiera que aplique la regla sin criterio.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Instrumento 4 · calibración</p>
+  <h2>Las compuertas también se miden</h2>
+  <p class="note">Las compuertas de calidad son heurísticas que escribió alguien. Una que marca páginas que el revisor luego aprueba quema minutos y enseña al revisor a ignorarla. Lo que el revisor rechaza sin que ninguna compuerta avisara es una compuerta que falta. Nadie en la categoría mide las suyas.</p>
+
+  <div class="grid g3" style="margin-top:16px">
+    <div class="tile"><span class="num" style="color:var(--bad)">358</span><span class="cap">minutos de revisión tirados por una sola compuerta mal calibrada, en la muestra de demo</span></div>
+    <div class="tile"><span class="num">22<span style="font-size:16px">%</span></span><span class="cap">su precisión real: de 18 bloqueos, 14 estaban bien</span></div>
+    <div class="tile"><span class="num" style="color:var(--measured)">9<span style="font-size:16px">%</span></span><span class="cap">suelo de Wilson, que es lo honesto con esa muestra</span></div>
+  </div>
+
+  <div class="panel">
+    <h3>Lo que nadie dice de una compuerta bloqueante</h3>
+    <p class="note" style="margin-top:6px">Si bloquea, la página <strong>no llega al revisor</strong>. Entonces su precisión es inmedible: no buena, no mala, inmedible. El módulo lo declara así y recomienda revisar a propósito una muestra de lo que bloquea, en vez de rellenar el hueco con un número bonito.</p>
+    <p class="note">Y con muestras pequeñas usa el límite inferior de Wilson, porque tres aciertos de tres es <span class="m">0,44</span> y no <span class="m">1,00</span>. Por debajo del tamaño mínimo responde «muestra insuficiente», que también es una respuesta.</p>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Diseño</p>
+  <h2>Las siete cosas que no se copian</h2>
+  <p class="note">No son opiniones en un documento: están implementadas como compuertas que bloquean. Su producto hace cinco de las siete.</p>
+  <ul class="rules">
+    <li><span>1</span><div><strong>Sin red recíproca de enlaces.</strong> Es un esquema de enlaces por la letra de la política.</div></li>
+    <li><span>2</span><div><strong>Sin alojar contenido de terceros</strong> en el dominio del cliente. Es site reputation abuse, con aplicación distinta en el EEE desde el 30-08-2026.</div></li>
+    <li><span>3</span><div><strong>Sin publicar sin compuerta editorial.</strong> El publicador se niega, y no toca la red al negarse.</div></li>
+    <li><span>4</span><div><strong>Sin traducción automática sin revisión nativa.</strong> La política nombra literalmente el «sinonimizado o traducción automatizados». Sus 50+ idiomas son su mayor exposición.</div></li>
+    <li><span>5</span><div><strong>Sin comentarios automáticos con marca.</strong> Va contra el acuerdo de usuario de Reddit y puede conseguir que baneen al cliente.</div></li>
+    <li><span>6</span><div><strong>Tope de 24 páginas al mes</strong>, no 120. Cuatro al día en un dominio sin revisión es el patrón que se enforced en 2026.</div></li>
+    <li><span>7</span><div><strong>Sin artefactos compartidos entre clientes.</strong> Veinte sitios con el mismo esqueleto de encabezados son una granja de contenido en agregado, aunque cada uno parezca limpio por separado. Hay una auditoría de huella cruzada que bloquea.</div></li>
+  </ul>
+</section>
+
+<section>
+  <p class="eyebrow">Honestidad</p>
+  <h2>Lo que todavía no está probado</h2>
+  <div class="panel">
+    <p>El sistema <strong>no se ha ejecutado contra un sitio en producción ni contra la API del modelo.</strong> Lo que sí se ha hecho: pasar el auditor y el publicador por HTTP real contra un WordPress que levanté yo, verificar el cliente del modelo contra las firmas del SDK 1.11.0 instalado, y recorrer la aplicación entera de punta a punta — del cliente HTTP al servidor, al trabajo en segundo plano, al auditor y de ahí por la red al WordPress.</p>
+    <p>Cada nivel de prueba encontró algo que el anterior no podía ver. El de transporte: el campo que detecta redirecciones comparaba las URL sin sus barras finales, así que <strong>nunca detectaba la redirección más común de WordPress</strong>, la que añade la barra. El de aplicación: el manejador de peticiones GET no atrapaba errores, así que un <span class="m">NameError</span> cerraba la conexión <strong>sin contestar nada</strong> y el cliente solo veía «el servidor cerró sin responder». Las dos cosas tienen ahora una prueba que las fija.</p>
+    <p>El <span class="m">100%</span> de publicables tal cual del test de integración es sobre un fixture que escribí para pasar las compuertas. <strong>No es evidencia de calidad</strong>, y usarlo para vender sería exactamente lo que le critico a la competencia. La cifra que vale se mide a ciegas, con rúbrica escrita antes de generar, sobre contenido real.</p>
+    <p style="margin-bottom:0">Y tres cosas son <strong>priores declarados, no mediciones</strong>, cada una aislada en su módulo para sustituirla el día que haya datos: los pesos de citabilidad, la curva de CTR por posición con la exposición a AI Overviews, y el valor relativo del clic por intención.</p>
+  </div>
+</section>
+
+<p class="foot">Las cuatro herramientas de arriba son funcionales y dan los mismos
+resultados que el sistema en Python. La auditoría no puede correr aquí porque una
+página no puede pedir páginas de otros dominios: esa necesita la aplicación local
+(<span class="m">python3 -m webapp</span>). Todo lo demás son mediciones reales de
+las ejecuciones del banco, no capturas.</p>
+
+</div>
+
+<script>
+/* --- Motor de citabilidad: puerto fiel del módulo en Python ------------- */
+var FIGURE = /(?:(?:\$|€)\s?\d[\d.,]*|\d[\d.,]*\s?(?:%|\$|€|usd|eur|euros|dolares|dólares|años|anos|meses|dias|días|horas|minutos|litros|galones|metros|pies|kg|libras|grados|veces|puntos))/gi;
+/* Detector de cifra redonda. Era una expresion regular sobre subcadenas y
+   daba falsos positivos caros: en "15.498,50 $" encontraba el "50" de los
+   decimales y trataba una medicion como consenso. Ahora mira la cifra entera. */
+function esRedonda(figura){
+  var m = /[\d.,]+/.exec(figura);
+  if (!m) return false;
+  var crudo = m[0].replace(/^[.,]+|[.,]+$/g, "");
+  if (!crudo) return false;
+  var entero = crudo, decimal = "";
+  var ultimo = Math.max(crudo.lastIndexOf("."), crudo.lastIndexOf(","));
+  var cola = ultimo === -1 ? -1 : crudo.length - ultimo - 1;
+  if (ultimo !== -1 && cola >= 1 && cola <= 2){
+    entero = crudo.slice(0, ultimo);
+    decimal = crudo.slice(ultimo + 1);
+  }
+  if (decimal && decimal.replace(/0/g, "")) return false;  // medicion
+  var digitos = entero.replace(/\D/g, "").replace(/^0+/, "");
+  if (!digitos) return false;
+  var ceros = digitos.length - digitos.replace(/0+$/, "").length;
+  if (ceros >= 2) return true;
+  return digitos.length <= 3 && ceros >= 1;
+}
+var APPROXIMATOR = /\b(?:unos|unas|aproximadamente|alrededor de|cerca de|mas o menos|más o menos|en torno a|sobre los|about|around|roughly|hasta|entre(?=\s+(?:\$|€)?\s*\d))\b/i;
+var ANAPHORA = /^\s*(?:este|esta|estos|estas|ese|esa|esos|esas|aquel|aquella|aquellos|aquellas|el mismo|la misma|dicho|dicha|dichos|dichas|su|sus|ello|eso|esto|tambien|también|además|ademas|por eso|por tanto|por ello|asi|así|it|this|that|these|those|they|their)\b/i;
+var DATE = /\b(?:19|20)\d{2}\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/;
+var METHOD = /\b(?:media|mediana|promedio|muestra|encuesta|medicion|medición|medimos|recogidos|recogimos|analizamos|registro|registros|auditoria|auditoría|presupuestos|casos|observaciones|segun nuestr|según nuestr|de nuestra|de nuestro|propia|propio)\b/i;
+var MD_LINK = /\[[^\]]+\]\((https?:\/\/[^)]+)\)/;
+var NAMED = /\b[A-Z]{2,6}\b|\b(?:segun|según)\s+[A-Z]\w+/;
+var QUALIFIER = /\b(?:en|de|por|para|segun|según|bajo|durante|tras|con)\s+(?:[A-Z]\w+|\d{4}|\d[\d.,]*\s?\w+)/g;
+var WORDRE = /[0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ][0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’\-]*/g;
+var W = {atr:0.385, esc:0.385, ali:0.230}, LIFT = 65;
+
+function words(t){ return t.match(WORDRE) || []; }
+function stripLinks(t){ return t.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1"); }
+
+function isPrecise(text){
+  var re = new RegExp(FIGURE.source, "gi"), m;
+  while ((m = re.exec(text)) !== null){
+    if (esRedonda(m[0])) continue;
+    var before = text.slice(Math.max(0, m.index - 24), m.index);
+    if (APPROXIMATOR.test(before)) continue;
+    return true;
+  }
+  return false;
+}
+
+function sentencesOf(text){
+  var out = [], buf = [];
+  function flush(){
+    if (!buf.length) return;
+    var joined = buf.join(" ").split(/\s+/).join(" ");
+    joined.split(/(?<=[.!?])\s+/).forEach(function(s){ if (s.trim()) out.push(s.trim()); });
+    buf = [];
+  }
+  text.split("\n").forEach(function(raw){
+    var line = raw.trim();
+    if (!line){ flush(); return; }
+    if (line.charAt(0) === "#"){ flush(); out.push(line); return; }
+    buf.push(line);
+  });
+  flush();
+  return out;
+}
+
+function analyse(body){
+  var quotes = [], questionHeadings = 0, isQuestion = false, position = 0;
+  sentencesOf(body).forEach(function(s){
+    if (s.charAt(0) === "#"){
+      var m = s.match(/^#{1,4}\s+(.+)$/);
+      var text = m ? m[1] : s;
+      isQuestion = text.trim().slice(-1) === "?";
+      if (isQuestion) questionHeadings += 1;
+      position = 0;
+      return;
+    }
+    if (!new RegExp(FIGURE.source, "i").test(s)){ position += 1; return; }
+
+    var b = [], ext = 100, w = words(s);
+    if (ANAPHORA.test(s)){ ext -= 55; b.push("Empieza por un pronombre o conector: fuera del párrafo no se sabe de qué habla. Nombrar el sujeto."); }
+    if (w.length < 8){ ext -= 30; b.push("Demasiado corta (" + w.length + " palabras): no dice lo suficiente para ser una respuesta."); }
+    else if (w.length > 45){ ext -= 35; b.push("Demasiado larga (" + w.length + " palabras): no cabe en una respuesta generada. Partirla."); }
+    if (/^(Y |Pero |Aunque |Mientras )/.test(s)){ ext -= 20; b.push("Arranca subordinada a la frase anterior."); }
+    ext = Math.max(0, ext);
+
+    var atr = 0, hasLink = MD_LINK.test(s), hasNamed = NAMED.test(stripLinks(s));
+    if (METHOD.test(s)) atr += 35; else b.push("Sin método: añadir de dónde sale el dato (media de N casos, muestra, registro).");
+    if (DATE.test(s)) atr += 30; else b.push("Sin fecha: un dato sin año no se puede citar con confianza.");
+    if (hasLink) atr += 25;
+    if (hasNamed) atr += 10;
+    if (!hasLink && !hasNamed) b.push("Sin fuente nombrada ni enlazada en la propia frase.");
+    atr = Math.min(100, atr);
+
+    var esc = 0;
+    if (isPrecise(s)) esc += 50;
+    else if (new RegExp(FIGURE.source, "i").test(s)){ esc += 10; b.push("Cifra redonda o aproximada: eso lo tiene el modelo en su propio peso y no necesita citarte. Dar la cifra exacta medida."); }
+    else b.push("Sin cifra: no hay nada atribuible que levantar.");
+    var q = s.match(QUALIFIER) || [];
+    esc += Math.min(35, q.length * 15);
+    if (q.length < 2) b.push("Poco acotada: añadir dónde, cuándo o bajo qué condición. Un dato sin contexto es intercambiable por el de cualquier otro.");
+    if (METHOD.test(s)) esc += 15;
+    esc = Math.min(100, esc);
+
+    var ali = 40;
+    if (isQuestion) ali += 40;
+    else b.push("No está debajo de un encabezado en forma de pregunta: el modelo empareja pregunta con respuesta.");
+    if (position === 0) ali += 20;
+    else if (position > 2){ ali -= 10; b.push("Enterrada en la sección: la respuesta va en la primera frase."); }
+    ali = Math.max(0, Math.min(100, ali));
+
+    /* La extraibilidad MULTIPLICA: es una condición necesaria, no un sumando.
+       Como sumando, una frase imposible de levantar pero bien atribuida salía
+       citable, que es absurdo. */
+    var base = atr * W.atr + esc * W.esc + ali * W.ali;
+    var total = Math.round(base * ext / 100);
+    quotes.push({text:s.slice(0,300), ext:ext, atr:atr, esc:esc, ali:ali,
+                 total:total, liftable: total >= LIFT, blockers:b});
+    position += 1;
+  });
+
+  var liftable = quotes.filter(function(q){ return q.liftable; })
+                       .sort(function(a,b){ return b.total - a.total; });
+  var score = 0;
+  if (quotes.length){
+    var best = quotes.map(function(q){ return q.total; })
+                     .sort(function(a,b){ return b - a; }).slice(0,5);
+    var ceiling = best.reduce(function(a,b){ return a + b; }, 0) / best.length;
+    score = Math.round(ceiling * (0.7 + 0.3 * Math.min(1, liftable.length / 5)));
+  }
+  var counts = {};
+  quotes.filter(function(q){ return !q.liftable; }).forEach(function(q){
+    q.blockers.forEach(function(x){ counts[x] = (counts[x] || 0) + 1; });
+  });
+  var fixes = Object.keys(counts).map(function(k){ return [k, counts[k]]; })
+                    .sort(function(a,b){ return b[1] - a[1]; }).slice(0,5);
+  return {score:score, quotes:quotes, liftable:liftable, fixes:fixes,
+          questionHeadings:questionHeadings};
+}
+
+/* Puerto de clusters/ e insight/ a JS. Fidelidad verificada contra Python. */
+
+/* ---------- intención (auditor/intent.py) ---------- */
+var SIGNALS = [
+  ["transactional", 90, ["near me","cerca de mi","buy","comprar","hire","contratar",
+    "quote","presupuesto","book","reservar","order","pedir","for sale","en venta",
+    "contractor","installer","instalador","service near","companies in","empresas en"]],
+  ["commercial", 75, [" vs "," vs. ","versus","best ","mejor ","mejores ","top ",
+    "review","reseña","resena","comparison","comparativa","alternative","alternativa",
+    "cost","coste","costo","precio","price","pricing","cheap","barato","calculator",
+    "calculadora","how much","cuanto cuesta","cuánto cuesta","worth it",
+    "merece la pena","brands","marcas","which "]],
+  ["informational", 25, ["what is","que es","qué es","how to","como ","cómo ","why ",
+    "por que","por qué","guide","guia","guía","meaning","significado","definition",
+    "definicion","definición","symptoms","sintomas","síntomas","causes","causas",
+    "explained","explicado","tips","consejos","history","historia","examples",
+    "ejemplos","benefits","beneficios","types","tipos"]]
+];
+
+function classifyIntent(url, title){
+  var slug = String(url).toLowerCase().split(/[-_\/]+/).join(" ");
+  var hay = " " + String(title || "").toLowerCase() + " " + slug + " ";
+  for (var i = 0; i < SIGNALS.length; i++){
+    var s = SIGNALS[i];
+    for (var j = 0; j < s[2].length; j++){
+      if (hay.indexOf(s[2][j]) >= 0) return {label:s[0], survival:s[1]};
+    }
+  }
+  return {label:"undetermined", survival:45};
+}
+
+/* ---------- keywords (clusters/keywords.py) ---------- */
+var MODIFIERS = [
+  ["cuanto cuesta","§precio"],["cuánto cuesta","§precio"],
+  ["how much does","§precio"],["how much","§precio"],
+  ["donde comprar","§comprar"],["where to buy","§comprar"],
+  ["cerca de mi","§cerca"],["en mi zona","§cerca"],["near me","§cerca"],
+  ["que es","§quees"],["qué es","§quees"],["what is","§quees"],
+  ["how to","§como"],
+  ["precio","§precio"],["precios","§precio"],["coste","§precio"],
+  ["costo","§precio"],["costes","§precio"],["cost","§precio"],
+  ["price","§precio"],["pricing","§precio"],["tarifa","§precio"],
+  ["mejor","§mejor"],["mejores","§mejor"],["best","§mejor"],["top","§mejor"],
+  ["comparativa","§vs"],["comparison","§vs"],["versus","§vs"],["vs","§vs"],
+  ["compare","§vs"],
+  ["reseña","§review"],["resena","§review"],["opiniones","§review"],
+  ["review","§review"],["reviews","§review"],
+  ["comprar","§comprar"],["buy","§comprar"],
+  ["como","§como"],["cómo","§como"]
+];
+var STOP = {"the":1,"and":1,"for":1,"with":1,"your":1,"you":1,"are":1,"how":1,
+  "what":1,"why":1,"que":1,"los":1,"las":1,"del":1,"por":1,"con":1,"una":1,
+  "uno":1,"para":1,"como":1,"mi":1,"de":1,"en":1,"el":1,"la":1,"un":1,"is":1,
+  "to":1,"a":1,"of":1,"do":1,"does":1};
+var TOKRE = /[a-z0-9áéíóúüñ]+/g;
+
+function normalizeModifiers(term){
+  var out = " " + String(term).toLowerCase() + " ";
+  for (var i = 0; i < MODIFIERS.length; i++){
+    out = out.split(" " + MODIFIERS[i][0] + " ").join(" " + MODIFIERS[i][1] + " ");
+  }
+  return out.trim();
+}
+
+function Keyword(term, volume, cpc, difficulty){
+  this.term = String(term).toLowerCase().split(/\s+/).filter(Boolean).join(" ");
+  this.volume = volume || 0;
+  this.cpc = cpc || 0;
+  this.difficulty = difficulty || 0;
+  this.intent = classifyIntent(this.term.split(" ").join("-"), this.term);
+}
+Keyword.prototype.tokens = function(){
+  if (this._tok) return this._tok;
+  var found = {};
+  normalizeModifiers(this.term).split(/\s+/).forEach(function(raw){
+    if (raw.charAt(0) === "§"){ found[raw] = 1; return; }
+    var m = raw.match(TOKRE) || [];
+    m.forEach(function(t){
+      if (t.length > 2 && !STOP[t]) found[t.replace(/s$/, "") || t] = 1;
+    });
+  });
+  this._tok = Object.keys(found);
+  return this._tok;
+};
+Keyword.prototype.slug = function(){
+  return this.term.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+};
+Keyword.prototype.priority = function(){
+  var base = Math.max(this.volume, 1);
+  var survival = Math.pow(this.intent.survival / 100, 2);
+  var boost = 1 + Math.min(this.cpc, 20) / 20;
+  return Math.round(base * survival * boost * 100) / 100;
+};
+
+/* ---------- grafo (clusters/graph.py) ---------- */
+function setOf(arr){ var o = {}; arr.forEach(function(x){ o[x] = 1; }); return o; }
+function inter(a, b){ var s = setOf(b); return a.filter(function(x){ return s[x]; }); }
+function jaccard(a, b){
+  if (!a.length || !b.length) return 0;
+  var i = inter(a, b).length;
+  var u = Object.keys(setOf(a.concat(b))).length;
+  return i / u;
+}
+function genericTokens(keywords, ratio){
+  ratio = ratio || 0.4;
+  if (keywords.length < 5) return {};
+  var counts = {};
+  keywords.forEach(function(k){
+    k.tokens().forEach(function(t){ counts[t] = (counts[t] || 0) + 1; });
+  });
+  var limit = Math.max(2, Math.floor(keywords.length * ratio));
+  var out = {};
+  Object.keys(counts).forEach(function(t){ if (counts[t] >= limit) out[t] = 1; });
+  return out;
+}
+
+function buildGraph(keywords, mergeThreshold){
+  mergeThreshold = mergeThreshold === undefined ? 0.6 : mergeThreshold;
+  var graph = {clusters:[], merged:0};
+  if (!keywords.length) return graph;
+
+  var ubiq = genericTokens(keywords);
+  var topical = {};
+  keywords.forEach(function(k){
+    var t = k.tokens().filter(function(x){ return !ubiq[x]; });
+    topical[k.term] = t.length ? t : k.tokens();
+  });
+
+  var pending = keywords.slice().sort(function(a, b){
+    var d = b.priority() - a.priority();
+    return d !== 0 ? d : (a.term < b.term ? -1 : a.term > b.term ? 1 : 0);
+  });
+  var assigned = {};
+
+  pending.forEach(function(seed){
+    if (assigned[seed.term]) return;
+    var members = [seed];
+    assigned[seed.term] = 1;
+    pending.forEach(function(cand){
+      if (assigned[cand.term]) return;
+      var shared = inter(topical[seed.term], topical[cand.term]);
+      var rel = shared.length >= 1 || jaccard(seed.tokens(), cand.tokens()) >= 0.5;
+      if (rel){ members.push(cand); assigned[cand.term] = 1; }
+    });
+
+    /* páginas, fusionando casi duplicadas de la MISMA intención */
+    var ordered = members.slice().sort(function(a, b){
+      var d = b.priority() - a.priority();
+      return d !== 0 ? d : (a.term < b.term ? -1 : a.term > b.term ? 1 : 0);
+    });
+    var pages = [];
+    ordered.forEach(function(kw){
+      for (var i = 0; i < pages.length; i++){
+        if (pages[i].primary.intent.label !== kw.intent.label) continue;
+        if (jaccard(pages[i].primary.tokens(), kw.tokens()) >= mergeThreshold){
+          pages[i].secondary.push(kw); return;
+        }
+      }
+      pages.push({primary:kw, secondary:[], role:"satellite", cluster:""});
+    });
+    for (var i = 1; i < pages.length; i++){
+      if (pages[i].primary.term === seed.term){
+        pages.unshift(pages.splice(i, 1)[0]); break;
+      }
+    }
+    graph.merged += members.length - pages.length;
+
+    var topic = seed.tokens().slice().sort().slice(0, 3).join(" ") || seed.term;
+    var id = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "cluster";
+    var existing = setOf(graph.clusters.map(function(c){ return c.id; }));
+    if (existing[id]) id = id + "-" + (graph.clusters.length + 1);
+
+    pages[0].role = "pillar"; pages[0].cluster = id;
+    var sats = pages.slice(1);
+    sats.forEach(function(p){ p.role = "satellite"; p.cluster = id; });
+    graph.clusters.push({id:id, topic:topic, pillar:pages[0], satellites:sats});
+  });
+
+  graph.clusters.forEach(function(c){
+    c.pages = [c.pillar].concat(c.satellites);
+    c.pages.forEach(function(p){
+      p.minWords = p.role === "pillar" ? 1800 : 1200;
+      p.priority = p.primary.priority() +
+        p.secondary.reduce(function(a, k){ return a + k.priority(); }, 0) * 0.25;
+      p.slug = p.primary.slug();
+      p.intent = p.primary.intent.label;
+    });
+    c.priority = c.pages.reduce(function(a, p){ return a + p.priority; }, 0);
+  });
+  graph.clusters.sort(function(a, b){ return b.priority - a.priority; });
+  graph.pages = [];
+  graph.clusters.forEach(function(c){ graph.pages = graph.pages.concat(c.pages); });
+  graph.keywordCount = graph.pages.reduce(function(a, p){
+    return a + 1 + p.secondary.length; }, 0);
+  graph.links = graph.clusters.reduce(function(a, c){
+    return a + c.satellites.length * 2; }, 0);
+  return graph;
+}
+
+/* ---------- validación (clusters/validate.py) ---------- */
+function validateGraph(graph, cap){
+  cap = cap || 24;
+  var f = [];
+  var add = function(code, sev, msg){ f.push({code:code, severity:sev, message:msg,
+    blocking: sev === "bloqueante"}); };
+  if (!graph.pages || !graph.pages.length){
+    add("vacio", "bloqueante", "El grafo no tiene paginas.");
+    return {findings:f, passed:false};
+  }
+  var primaries = {};
+  graph.pages.forEach(function(p){
+    (primaries[p.primary.term] = primaries[p.primary.term] || []).push(p.slug);
+  });
+  Object.keys(primaries).forEach(function(t){
+    if (primaries[t].length > 1)
+      add("primaria_duplicada", "bloqueante", "La keyword primaria '" + t +
+        "' esta asignada a " + primaries[t].length + " paginas.");
+  });
+  var secondaries = {};
+  graph.pages.forEach(function(p){
+    p.secondary.forEach(function(k){
+      (secondaries[k.term] = secondaries[k.term] || []).push(p.slug);
+    });
+  });
+  Object.keys(secondaries).forEach(function(t){
+    if (primaries[t]) add("primaria_y_secundaria", "bloqueante",
+      "'" + t + "' es primaria y secundaria a la vez.");
+    else if (secondaries[t].length > 1) add("secundaria_repartida", "aviso",
+      "'" + t + "' aparece como secundaria en " + secondaries[t].length + " paginas.");
+  });
+  for (var i = 0; i < graph.pages.length; i++){
+    for (var j = i + 1; j < graph.pages.length; j++){
+      var a = graph.pages[i], b = graph.pages[j];
+      var sc = jaccard(a.primary.tokens(), b.primary.tokens());
+      if (sc < 0.75) continue;
+      if (a.primary.intent.label === b.primary.intent.label)
+        add("primarias_en_conflicto", "bloqueante", "'" + a.primary.term + "' y '" +
+          b.primary.term + "' tienen similitud " + sc.toFixed(2) +
+          " y la misma intencion (" + a.intent + "): competiran entre si.");
+      else
+        add("primarias_parecidas_intencion_distinta", "aviso", "'" + a.primary.term +
+          "' (" + a.intent + ") y '" + b.primary.term + "' (" + b.intent +
+          ") se parecen " + sc.toFixed(2) + " pero buscan cosas distintas.");
+    }
+  }
+  var slugs = {};
+  graph.pages.forEach(function(p){ slugs[p.slug] = (slugs[p.slug] || 0) + 1; });
+  Object.keys(slugs).forEach(function(s){
+    if (slugs[s] > 1) add("slug_duplicado", "bloqueante",
+      "El slug '" + s + "' se repite " + slugs[s] + " veces.");
+  });
+  if (graph.pages.length > cap)
+    add("tope_superado", "aviso", "El grafo tiene " + graph.pages.length +
+      " paginas y el tope mensual es " + cap +
+      ". El planificador las reparte en varios meses por prioridad.");
+  var surviving = graph.pages.filter(function(p){
+    return p.primary.intent.survival >= 50; }).length;
+  var share = surviving / graph.pages.length;
+  if (share < 0.5)
+    add("mezcla_informacional", "aviso", "Solo el " + Math.round(share * 100) +
+      "% de las paginas tiene intencion con clic superviviente (minimo " +
+      "recomendado 50%). Las informacionales puras rankean sin recibir la visita.");
+  graph.clusters.forEach(function(c){
+    if (!c.satellites.length) return;
+    var maxSat = Math.max.apply(null, c.satellites.map(function(s){ return s.priority; }));
+    if (c.pillar.priority < maxSat)
+      add("pilar_mas_debil_que_satelite", "aviso", "En el cluster '" + c.id +
+        "' un satelite tiene mas prioridad que el pilar.");
+  });
+  return {findings:f, passed: !f.some(function(x){ return x.blocking; })};
+}
+
+/* ---------- plan (clusters/plan.py) ---------- */
+function buildPlan(graph, cap){
+  cap = cap || 24;
+  var ordered = [];
+  graph.clusters.slice().sort(function(a, b){ return b.priority - a.priority; })
+    .forEach(function(c){
+      ordered.push(c.pillar);
+      c.satellites.slice().sort(function(a, b){ return b.priority - a.priority; })
+        .forEach(function(s){ ordered.push(s); });
+    });
+  var months = {};
+  ordered.forEach(function(p, i){
+    var m = Math.floor(i / cap) + 1;
+    (months[m] = months[m] || []).push({page:p, position:(i % cap) + 1});
+  });
+  var mix = {}, total = ordered.length;
+  ordered.forEach(function(p){ mix[p.intent] = (mix[p.intent] || 0) + 1; });
+  Object.keys(mix).forEach(function(k){
+    mix[k] = Math.round(1000 * mix[k] / total) / 10; });
+  return {months:months, total:total, horizon:Object.keys(months).length, mix:mix};
+}
+
+/* ---------- oportunidad (insight/) ---------- */
+var CTR = {1:0.279,2:0.157,3:0.110,4:0.080,5:0.061,6:0.049,7:0.040,8:0.033,
+  9:0.028,10:0.025,11:0.018,12:0.016,13:0.014,14:0.013,15:0.012,16:0.011,
+  17:0.010,18:0.009,19:0.009,20:0.008};
+var CTR_FLOOR = 0.004;
+var AIO = {informational:0.90, undetermined:0.60, commercial:0.45, transactional:0.20};
+var SUPPRESSION = 0.58;
+var VALUE = {informational:0.15, undetermined:0.40, commercial:1.00, transactional:2.50};
+
+function ctrAt(pos){
+  if (pos < 1) pos = 1;
+  var low = Math.floor(pos), high = low + 1;
+  var a = CTR[low] === undefined ? CTR_FLOOR : CTR[low];
+  var b = CTR[high] === undefined ? CTR_FLOOR : CTR[high];
+  return a + (b - a) * (pos - low);
+}
+function retention(intent){
+  var e = AIO[intent] === undefined ? 0.60 : AIO[intent];
+  return Math.round((1 - e * SUPPRESSION) * 10000) / 10000;
+}
+function clickValue(intent){
+  return VALUE[intent] === undefined ? 0.40 : VALUE[intent];
+}
+function bandOf(pos){
+  if (pos <= 0) return "sin posicion";
+  if (pos <= 3) return "ya arriba";
+  if (pos <= 10) return "a tiro";
+  if (pos <= 30) return "distancia de golpeo";
+  return "lejos";
+}
+var TARGETS = {"ya arriba":1,"a tiro":3,"distancia de golpeo":7,"lejos":15};
+
+function analyseOpportunity(rows, minImpressions){
+  minImpressions = minImpressions === undefined ? 30 : minImpressions;
+  var items = [], skipped = 0, unmeasurable = 0;
+  rows.forEach(function(r){
+    if (r.impressions < minImpressions){ skipped++; return; }
+    var band = bandOf(r.position);
+    if (band === "sin posicion"){ unmeasurable++; return; }
+    var subject = r.query || r.page;
+    var intent = classifyIntent(String(subject).split(" ").join("-"), r.query).label;
+    var delta = Math.max(0, ctrAt(TARGETS[band]) - ctrAt(r.position));
+    var raw = r.impressions * delta;
+    var adjusted = raw * retention(intent);
+    items.push({
+      subject:subject, impressions:r.impressions, position:r.position,
+      intent:intent, band:band,
+      raw: Math.round(raw * 100) / 100,
+      adjusted: Math.round(adjusted * 100) / 100,
+      value: Math.round(adjusted * clickValue(intent) * 100) / 100,
+      lost: Math.round((raw - adjusted) * 10) / 10
+    });
+  });
+  var byValue = items.slice().sort(function(a, b){ return b.value - a.value; });
+  var byClicks = items.slice().sort(function(a, b){ return b.raw - a.raw; });
+  var demoted = [], promoted = [];
+  byClicks.forEach(function(o, i){
+    var vp = byValue.indexOf(o) + 1, cp = i + 1;
+    if (vp - cp >= 2) demoted.push({subject:o.subject, before:cp, after:vp});
+  });
+  byValue.forEach(function(o, i){
+    var cp = byClicks.indexOf(o) + 1, vp = i + 1;
+    if (cp - vp >= 2) promoted.push({subject:o.subject, before:cp, after:vp});
+  });
+  return {
+    items:items, byValue:byValue, byClicks:byClicks,
+    demoted:demoted, promoted:promoted,
+    totalAdjusted: Math.round(items.reduce(function(a, o){ return a + o.adjusted; }, 0) * 10) / 10,
+    totalLost: Math.round(items.reduce(function(a, o){ return a + o.lost; }, 0) * 10) / 10,
+    skipped:skipped, unmeasurable:unmeasurable
+  };
+}
+
+/* ---------- CSV ---------- */
+function parseCsv(text){
+  var lines = String(text).replace(/\r\n?/g, "\n").split("\n").filter(function(l){
+    return l.trim().length; });
+  if (!lines.length) return {header:[], rows:[]};
+  var split = function(line){
+    var out = [], cur = "", q = false;
+    for (var i = 0; i < line.length; i++){
+      var c = line.charAt(i);
+      if (c === '"'){
+        if (q && line.charAt(i + 1) === '"'){ cur += '"'; i++; } else q = !q;
+      } else if (c === "," && !q){ out.push(cur); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out.map(function(x){ return x.trim(); });
+  };
+  var header = split(lines[0]).map(function(h){
+    return h.replace(/^﻿/, ""); });
+  var rows = lines.slice(1).map(function(l){
+    var cells = split(l), o = {};
+    header.forEach(function(h, i){ o[h] = cells[i] === undefined ? "" : cells[i]; });
+    return o;
+  });
+  return {header:header, rows:rows};
+}
+function pick(header, names){
+  var lower = {};
+  header.forEach(function(h){ lower[h.toLowerCase().trim()] = h; });
+  for (var i = 0; i < names.length; i++) if (lower[names[i]]) return lower[names[i]];
+  var keys = Object.keys(lower);
+  for (var j = 0; j < keys.length; j++)
+    for (var k = 0; k < names.length; k++)
+      if (keys[j].indexOf(names[k]) >= 0) return lower[keys[j]];
+  return null;
+}
+function isDecimalGroup(v, sep){
+  var tail = v.split(sep).pop();
+  return !(tail.length === 3 && /^\d+$/.test(tail));
+}
+function num(raw){
+  if (!raw) return 0;
+  var c = String(raw).trim().replace(/[$€%]/g, "").replace(/\s/g, "");
+  if (c.indexOf(",") >= 0 && c.indexOf(".") >= 0){
+    c = c.lastIndexOf(",") > c.lastIndexOf(".")
+      ? c.split(".").join("").replace(",", ".")
+      : c.split(",").join("");
+  } else if ((c.match(/,/g) || []).length > 1) c = c.split(",").join("");
+  else if (c.indexOf(",") >= 0)
+    c = isDecimalGroup(c, ",") ? c.replace(",", ".") : c.split(",").join("");
+  else if ((c.match(/\./g) || []).length > 1) c = c.split(".").join("");
+  else if (c.indexOf(".") >= 0 && !isDecimalGroup(c, "."))
+    c = c.split(".").join("");
+  var n = parseFloat(c);
+  return isNaN(n) ? 0 : n;
+}
+
+/* Puerto de dataset/ a JS. Procedencia, agregacion y pagina de datos. */
+var MIN_N = {recuento:3, mediana:8, media:8, p25:20, p75:20};
+var DEFAULT_MIN_N = 8;
+var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto",
+             "septiembre","octubre","noviembre","diciembre"];
+var ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+function problemasProcedencia(p){
+  var g = [];
+  if (!p.source) g.push("sin fuente");
+  if (!p.method) g.push("sin metodo de recogida");
+  if (!ISO.test(p.collected_at || "")) g.push("fecha ausente o no es AAAA-MM-DD");
+  return g;
+}
+
+function cargarObservaciones(texto){
+  var p = parseCsv(texto);
+  if (!p.rows.length) throw new Error("El CSV no tiene filas.");
+  var cv = pick(p.header, ["valor","value","importe","cifra"]);
+  if (!cv) throw new Error("No hay columna de valor. Cabeceras: " + p.header.join(", "));
+  var cu = pick(p.header, ["unidad","unit"]);
+  var cf = pick(p.header, ["fuente","source","empresa","proveedor"]);
+  var cd = pick(p.header, ["fecha","date","recogido"]);
+  var cm = pick(p.header, ["metodo","método","method"]);
+  var curl = pick(p.header, ["url","enlace","link"]);
+  var reservadas = {};
+  [cv,cu,cf,cd,cm,curl].forEach(function(c){ if (c) reservadas[c] = 1; });
+
+  var usables = [], descartadas = [];
+  p.rows.forEach(function(r, i){
+    var bruto = String(r[cv] || "").replace(",", ".").trim();
+    var valor = parseFloat(bruto);
+    if (isNaN(valor)){ descartadas.push({fila:i+2, motivos:["el valor no es un numero"]}); return; }
+    var prov = {source: cf ? (r[cf]||"").trim() : "",
+                collected_at: cd ? (r[cd]||"").trim() : "",
+                method: cm ? (r[cm]||"").trim() : "",
+                url: curl ? (r[curl]||"").trim() : ""};
+    var probs = problemasProcedencia(prov);
+    if (probs.length){ descartadas.push({fila:i+2, motivos:probs}); return; }
+    var dims = {};
+    Object.keys(r).forEach(function(k){
+      if (!reservadas[k] && (r[k]||"").trim()) dims[k] = r[k].trim(); });
+    usables.push({value:valor, unit: cu ? (r[cu]||"").trim() : "", dims:dims, prov:prov});
+  });
+  return {usables:usables, descartadas:descartadas,
+          unit: usables.length ? usables[0].unit : "",
+          dims: Object.keys(usables.reduce(function(a,r){
+            Object.keys(r.dims).forEach(function(d){ a[d]=1; }); return a; }, {})).sort()};
+}
+
+function mediana(v){
+  var s = v.slice().sort(function(a,b){ return a-b; }), n = s.length;
+  return n % 2 ? s[(n-1)/2] : (s[n/2 - 1] + s[n/2]) / 2;
+}
+function estadistico(nombre, v){
+  if (nombre === "mediana") return mediana(v);
+  if (nombre === "media") return v.reduce(function(a,b){return a+b;},0) / v.length;
+  if (nombre === "recuento") return v.length;
+  var corte = nombre === "p25" ? 0.25 : 0.75;
+  var s = v.slice().sort(function(a,b){ return a-b; });
+  var pos = corte * (s.length - 1), bajo = Math.floor(pos);
+  var alto = Math.min(bajo + 1, s.length - 1);
+  return s[bajo] * (1 - (pos - bajo)) + s[alto] * (pos - bajo);
+}
+
+function formatear(valor, unidad, est){
+  var texto;
+  if (est === "recuento" || Number.isInteger(valor)){
+    texto = String(Math.round(valor)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  } else {
+    texto = valor.toFixed(2).replace(/\B(?=(\d{3})+(?!\d)\.)/g, "¬")
+            .replace(".", ",").split("¬").join(".");
+  }
+  return (texto + " " + (est === "recuento" ? "" : unidad)).trim();
+}
+
+function periodoDe(regs){
+  var fechas = regs.map(function(r){ return r.prov.collected_at; }).sort();
+  if (!fechas.length) return "";
+  var a = fechas[0], b = fechas[fechas.length - 1];
+  if (a.slice(0,4) !== b.slice(0,4)) return a.slice(0,4) + "-" + b.slice(0,4);
+  if (a.slice(5,7) === b.slice(5,7))
+    return MESES[parseInt(a.slice(5,7),10)-1] + " de " + a.slice(0,4);
+  return a.slice(0,4) + ", entre " + MESES[parseInt(a.slice(5,7),10)-1] +
+         " y " + MESES[parseInt(b.slice(5,7),10)-1];
+}
+
+function calcular(datos, est, agruparPor, etiqueta){
+  est = est || "mediana";
+  var grupos = {};
+  datos.usables.forEach(function(r){
+    var clave = agruparPor ? (r.dims[agruparPor] || "") : "";
+    (grupos[clave] = grupos[clave] || []).push(r);
+  });
+  var metodos = {};
+  datos.usables.forEach(function(r){ metodos[r.prov.method] = 1; });
+  var metodo = Object.keys(metodos).length === 1 ? Object.keys(metodos)[0] : "";
+
+  return Object.keys(grupos).sort().map(function(clave){
+    var miembros = grupos[clave];
+    var valor = Math.round(estadistico(est, miembros.map(function(r){ return r.value; })) * 100) / 100;
+    var minimo = MIN_N[est] === undefined ? DEFAULT_MIN_N : MIN_N[est];
+    return {
+      where: clave, statistic: est, value: valor, n: miembros.length, minN: minimo,
+      publishable: miembros.length >= minimo,
+      unit: est === "recuento" ? "" : (miembros[0].unit || datos.unit),
+      formatted: formatear(valor, miembros[0].unit || datos.unit, est),
+      period: periodoDe(miembros), method: metodo, label: etiqueta || "",
+      whyNot: miembros.length >= minimo ? "" :
+        miembros.length + " observacion(es) para una " + est + ": hacen falta " +
+        minimo + ". Publicarla seria dar por medicion lo que es una anecdota con decimales."
+    };
+  });
+}
+
+function fraseDe(f, sujeto){
+  var partes = [sujeto.trim().replace(/\.$/, ""), "fue de " + f.formatted];
+  if (f.where) partes.push("en " + f.where);
+  if (f.period) partes.push("en " + f.period);
+  return partes.join(" ") + ", sobre una muestra propia de " + f.n +
+    (f.n === 1 ? " observacion" : " observaciones") +
+    (f.method ? " recogidas por " + f.method : "") + ".";
+}
+
+
+/* ===== Interfaz de las herramientas ============================== */
+var $ = function(s){ return document.querySelector(s); };
+var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function sp(n){ return Number(n).toLocaleString("es-ES"); }
+function tile(v, t, color){
+  return '<div class="tile"><b' + (color ? ' style="color:' + color + '"' : "") +
+    ">" + sp(v) + "</b><span>" + t + "</span></div>";
+}
+
+function abrir(nombre){
+  $$("[data-panel]").forEach(function(p){
+    p.hidden = p.getAttribute("data-panel") !== nombre; });
+  $$("nav.tabs button").forEach(function(b){
+    b.setAttribute("aria-selected", String(b.getAttribute("data-tab") === nombre)); });
+}
+
+/* ---------- 1. citabilidad ---------- */
+var FACTORES = [["Extraibilidad","ext"],["Atribuibilidad","atr"],
+                ["Escasez","esc"],["Alineacion","ali"]];
+
+function medirCitabilidad(){
+  var r = analyse($("#cit-text").value);
+  var h = '<div class="tiles">' +
+    tile(r.score, "citabilidad sobre 100",
+         r.score >= 60 ? "var(--good)" : r.score >= 30 ? "var(--warn)" : "var(--bad)") +
+    tile(r.liftable.length, "frases citables") +
+    tile(r.quotes.length, "frases con cifra") +
+    tile(r.questionHeadings, "encabezados pregunta") + "</div>";
+
+  h += '<div class="bars">';
+  FACTORES.forEach(function(f){
+    var vals = r.quotes.map(function(q){ return q[f[1]]; });
+    var avg = vals.length ? Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length) : 0;
+    h += '<div class="fb"><span>' + f[0] + '</span><div class="t"><i style="width:' +
+      avg + '%' + (f[1]==="esc" ? ";background:var(--measured)" : "") +
+      '"></i></div><em>' + avg + "</em></div>";
+  });
+  h += "</div>";
+
+  if (r.liftable.length){
+    h += '<p class="eyebrow" style="margin-top:18px">Frases que un modelo levantaria</p>';
+    r.liftable.forEach(function(q){ h += cita(q, false); });
+  } else if (r.quotes.length){
+    h += '<p class="eyebrow" style="margin-top:18px">Ninguna frase es citable tal como esta escrita</p>';
+    r.quotes.slice(0,3).forEach(function(q){ h += cita(q, true); });
+  } else {
+    h += '<p class="note" style="margin-top:16px">Ninguna frase lleva cifra, asi que no hay nada atribuible que levantar. Un modelo no cita opiniones.</p>';
+  }
+  if (r.fixes.length){
+    h += '<p class="eyebrow" style="margin-top:18px">Arreglos, por cuantas frases afectan</p>';
+    r.fixes.forEach(function(f){
+      h += '<div class="fix"><b>x' + f[1] + "</b><span>" + esc(f[0]) + "</span></div>"; });
+  }
+  $("#cit-out").innerHTML = h;
+}
+function cita(q, malo){
+  var h = '<div class="quote' + (malo ? " no" : "") + '"><span class="tag">' +
+    q.total + "/100 · ext " + q.ext + " · atr " + q.atr + " · esc " + q.esc +
+    " · ali " + q.ali + "</span>" + esc(q.text);
+  if (malo && q.blockers.length)
+    h += "<ul>" + q.blockers.map(function(b){ return "<li>" + esc(b) + "</li>"; }).join("") + "</ul>";
+  return h + "</div>";
+}
+
+/* ---------- 2. oportunidad ---------- */
+var OPO = null, MODO = "valor";
+
+function medirOportunidad(){
+  try{
+    var p = parseCsv($("#opo-csv").value);
+    if (!p.rows.length) throw new Error("El CSV no tiene filas.");
+    var fq = pick(p.header, ["query","consulta","consultas","keyword"]);
+    var fp = pick(p.header, ["page","pagina","página","url","address"]);
+    var fi = pick(p.header, ["impressions","impresiones"]);
+    var fc = pick(p.header, ["clicks","clics"]);
+    var fpos = pick(p.header, ["position","posicion","posición"]);
+    if (!fi) throw new Error("Falta la columna de impresiones.");
+    if (!fq && !fp) throw new Error("Falta la columna de consulta o de pagina.");
+    if (!fpos) throw new Error("Falta la columna de posicion: sin ella no se puede estimar la oportunidad, y no se inventa.");
+    var filas = p.rows.map(function(r){
+      return {query: fq ? r[fq] : "", page: fp ? r[fp] : "",
+              clicks: fc ? num(r[fc]) : 0, impressions: num(r[fi]),
+              position: num(r[fpos])};
+    }).filter(function(r){ return r.impressions || r.clicks; });
+    OPO = analyseOpportunity(filas);
+    if (!OPO.items.length) throw new Error("Ninguna fila tiene posicion y volumen suficientes (minimo 30 impresiones).");
+    pintarOportunidad();
+  } catch(e){
+    $("#opo-out").innerHTML = '<div class="err">' + esc(e.message) + "</div>";
+  }
+}
+
+function pintarOportunidad(){
+  var r = OPO, lista = MODO === "valor" ? r.byValue : r.byClicks;
+  var h = '<div class="tiles">' +
+    tile(Math.round(r.totalAdjusted), "clics/mes estimados") +
+    tile(Math.round(r.totalLost), "clics que se queda la respuesta generada", "var(--bad)") +
+    tile(r.demoted.length, "filas que bajan por valor") +
+    tile(r.skipped, "descartadas por volumen bajo") + "</div>";
+
+  h += '<div class="row" style="margin:0 0 4px">' +
+    '<button type="button" id="opo-clics" aria-pressed="' + (MODO!=="valor") +
+    '">Por clics (SEO clasico)</button>' +
+    '<button type="button" id="opo-valor" aria-pressed="' + (MODO==="valor") +
+    '">Por valor esperado</button></div>';
+
+  h += '<ol class="rank">';
+  lista.forEach(function(o, i){
+    var antes = r.byClicks.indexOf(o) + 1, ahora = i + 1;
+    var clase = MODO === "valor" && ahora - antes >= 2 ? "down"
+              : MODO === "valor" && antes - ahora >= 2 ? "up" : "";
+    h += '<li class="' + clase + '"><div><strong>' + esc(o.subject) + "</strong><br>" +
+      '<span class="note m">' + sp(o.impressions) + " impresiones · posicion " +
+      o.position + " · " + o.intent + " · " + o.band + "</span></div><span class='v'>" +
+      (MODO === "valor" ? Math.round(o.value) + " valor" : "+" + Math.round(o.raw) + " clics") +
+      "</span></li>";
+  });
+  h += "</ol>";
+
+  if (r.promoted.length || r.demoted.length){
+    h += '<p class="eyebrow" style="margin-top:18px">Lo que cambia respecto a priorizar por clics</p><ul class="note">';
+    r.promoted.forEach(function(m){ h += "<li><strong>sube</strong> «" + esc(m.subject) +
+      "»: puesto " + m.before + " → " + m.after + "</li>"; });
+    r.demoted.forEach(function(m){ h += "<li><strong>baja</strong> «" + esc(m.subject) +
+      "»: puesto " + m.before + " → " + m.after + "</li>"; });
+    h += "</ul>";
+  }
+  h += '<p class="note">Curva de CTR, exposicion a AI Overviews y valor del clic son priores de mercado, no mediciones de tu sitio.</p>';
+  $("#opo-out").innerHTML = h;
+  $("#opo-valor").addEventListener("click", function(){ MODO="valor"; pintarOportunidad(); });
+  $("#opo-clics").addEventListener("click", function(){ MODO="clics"; pintarOportunidad(); });
+}
+
+/* ---------- 3. clusters ---------- */
+function medirClusters(){
+  try{
+    var p = parseCsv($("#clu-csv").value);
+    if (!p.rows.length) throw new Error("El CSV no tiene filas.");
+    var ft = pick(p.header, ["keyword","palabra","query","term","consulta"]);
+    if (!ft) throw new Error("No hay columna de keyword. Cabeceras: " + p.header.join(", "));
+    var fv = pick(p.header, ["search volume","volume","volumen","searches"]);
+    var fc = pick(p.header, ["cpc","coste por clic"]);
+    var fd = pick(p.header, ["difficulty","dificultad","kd","competition"]);
+    var vistos = {}, ks = [];
+    p.rows.forEach(function(r){
+      var t = (r[ft] || "").trim();
+      if (!t) return;
+      var key = t.toLowerCase().split(/\s+/).join(" ");
+      if (vistos[key]) return;
+      vistos[key] = 1;
+      ks.push(new Keyword(t, fv ? num(r[fv]) : 0, fc ? num(r[fc]) : 0, fd ? num(r[fd]) : 0));
+    });
+    if (!ks.length) throw new Error("El CSV no contiene keywords.");
+
+    var cap = Math.max(1, Math.min(120, Number($("#clu-cap").value) || 24));
+    var g = buildGraph(ks), v = validateGraph(g, cap), plan = buildPlan(g, cap);
+
+    var h = '<div class="tiles">' +
+      tile(ks.length, "keywords leidas") + tile(g.clusters.length, "clusters") +
+      tile(g.pages.length, "paginas") + tile(g.merged, "fusionadas") +
+      tile(plan.horizon, "meses de plan") + "</div>";
+    h += '<p class="note">Solape cero: ninguna keyword primaria se asigna a dos paginas, y las casi duplicadas se fusionan en vez de generar dos paginas que compiten. ' +
+      g.keywordCount + " de " + ks.length + " keywords cubiertas, " + g.links +
+      " enlaces pilar-satelite.</p>";
+    var mix = Object.keys(plan.mix).map(function(k){ return k + " " + plan.mix[k] + "%"; });
+    if (mix.length) h += '<p class="note">Mezcla de intencion: ' + mix.join(" · ") + "</p>";
+
+    h += '<p class="eyebrow" style="margin-top:16px">Validacion ' +
+      (v.passed ? '<span class="pill g">pasa</span>' : '<span class="pill b">bloqueada</span>') + "</p>";
+    h += v.findings.length
+      ? "<ul class='note'>" + v.findings.map(function(f){
+          return '<li><span class="pill ' + (f.blocking ? "b" : "w") + '">' + f.severity +
+            "</span> <span class='m'>" + f.code + "</span> — " + esc(f.message) + "</li>"; }).join("") + "</ul>"
+      : '<p class="note">Sin hallazgos.</p>';
+
+    Object.keys(plan.months).sort(function(a,b){ return a-b; }).forEach(function(m){
+      var pags = plan.months[m];
+      h += '<p class="eyebrow" style="margin-top:18px">Mes ' + m + " — " + pags.length + " paginas</p>";
+      h += '<div class="scroll"><table><thead><tr><th>Pagina</th><th>Rol</th><th>Cluster</th><th>Intencion</th><th>Min. palabras</th><th>Prioridad</th></tr></thead><tbody>';
+      pags.forEach(function(it){
+        var pg = it.page;
+        h += "<tr><td>" + esc(pg.primary.term) +
+          (pg.secondary.length ? "<br><span class='note'>+ " +
+            esc(pg.secondary.map(function(k){ return k.term; }).join(", ")) + "</span>" : "") +
+          '</td><td><span class="pill ' + (pg.role === "pillar" ? "n" : "") + '">' + pg.role +
+          "</span></td><td class='m'>" + esc(pg.cluster) + "</td><td>" + pg.intent +
+          '</td><td class="n">' + sp(pg.minWords) + '</td><td class="n">' +
+          sp(Math.round(pg.priority)) + "</td></tr>";
+      });
+      h += "</tbody></table></div>";
+    });
+    $("#clu-out").innerHTML = h;
+  } catch(e){
+    $("#clu-out").innerHTML = '<div class="err">' + esc(e.message) + "</div>";
+  }
+}
+
+/* ---------- 5. economia unitaria ----------
+ *
+ * Puerto fiel de pricing/unit.py y pricing/plans.py. «Fiel» no es una
+ * promesa: hay un comparador que corre los dos sobre los mismos casos y
+ * falla si difieren mas de un centimo. Un puerto que se desvia del motor
+ * ensena numeros que el sistema no respalda, que es peor que no tenerlo.
+ */
+var TARIFAS = {
+  "claude-opus-5-5":   {in:15.0, out:75.0, cw:18.75, cr:1.50},
+  "claude-sonnet-5-5": {in:3.0,  out:15.0, cw:3.75,  cr:0.30},
+  "claude-haiku-4-5":  {in:1.0,  out:5.0,  cw:1.25,  cr:0.10}
+};
+var TARIFAS_REVISADAS = "2026-10-04";
+var DESCUENTO_LOTES = 0.50;
+var MARGEN_MINIMO = 0.35;
+
+function r4(x){ return Math.round(x * 1e4) / 1e4; }
+function r2(x){ return Math.round(x * 1e2) / 1e2; }
+function r6(x){ return Math.round(x * 1e6) / 1e6; }
+
+function costeModelo(u, modelo, lotes){
+  var t = TARIFAS[modelo || "claude-opus-5-5"];
+  if (!t) throw new Error("No hay tarifa declarada para «" + modelo + "».");
+  var bruto = ((u.input||0) * t.in + (u.output||0) * t.out +
+               (u.cacheWrite||0) * t.cw + (u.cacheRead||0) * t.cr) / 1e6;
+  if (lotes) bruto *= DESCUENTO_LOTES;
+  return r6(bruto);
+}
+
+function porPagina(o){
+  var coste = {modelo:0, revision:0, herramientas:0, entradas:[]};
+  var u = o.usage;
+  if (u && (u.calls || 0) > 0){
+    var bruto = costeModelo(u, o.modelo, o.lotes);
+    var llamadas = Math.max(u.calls || 1, 1);
+    coste.modelo = r4(bruto / llamadas * (1 + (o.reparaciones || 0)));
+    coste.entradas.push({medida:true});
+  } else {
+    coste.entradas.push({medida:false});
+  }
+  coste.revision = r4((o.minutosRevision || 0) / 60 * (o.costeHora || 0));
+  coste.entradas.push({medida: !!o.minutosMedidos});
+  coste.entradas.push({medida:false});          // coste por hora
+
+  // El reparto de herramientas es sobre la cartera entera cuando se declara:
+  // es coste fijo del negocio, no del cliente.
+  var den = (o.paginasCartera > 0) ? o.paginasCartera : (o.paginasMes || 0);
+  if (den > 0 && o.herramientasMes){
+    coste.herramientas = r4(o.herramientasMes / den);
+    coste.entradas.push({medida:false});
+  }
+  coste.total = r4(coste.modelo + coste.revision + coste.herramientas);
+  var tot = coste.total;
+  coste.reparto = tot <= 0 ? {modelo:0, revision:0, herramientas:0} : {
+    modelo: Math.round(100 * coste.modelo / tot),
+    revision: Math.round(100 * coste.revision / tot),
+    herramientas: Math.round(100 * coste.herramientas / tot)
+  };
+  coste.medido = coste.entradas.length
+    ? Math.round(100 * coste.entradas.filter(function(e){ return e.medida; }).length
+                 / coste.entradas.length) : 0;
+  return coste;
+}
+
+function opciones(plan, kw){
+  var o = {};
+  Object.keys(kw || {}).forEach(function(k){ o[k] = kw[k]; });
+  if (o.minutosRevision === undefined) o.minutosRevision = plan.minutosRevision;
+  o.paginasMes = plan.paginas;
+  return o;
+}
+
+function evaluar(plan, kw){
+  var coste = porPagina(opciones(plan, kw));
+  var costeMes = r2(coste.total * plan.paginas);
+  var margen = r2(plan.precioMes - costeMes);
+  var pct = plan.precioMes ? Math.round(1000 * margen / plan.precioMes) / 10 : 0;
+  return {plan:plan, costePagina:coste.total, costeMes:costeMes,
+          margenMes:margen, margenPct:pct, reparto:coste.reparto,
+          medido:coste.medido, sano: pct >= MARGEN_MINIMO * 100,
+          precioPagina: plan.paginas ? r2(plan.precioMes / plan.paginas) : 0};
+}
+
+function sensibilidad(plan, kw){
+  var partida = evaluar(plan, kw).margenPct;
+  var out = [];
+  var mins = (kw && kw.minutosRevision !== undefined)
+    ? kw.minutosRevision : plan.minutosRevision;
+
+  var peor = opciones(plan, kw); peor.minutosRevision = mins * 1.5;
+  out.push(caso("Minutos de revision por pagina", mins.toFixed(0),
+    (mins * 1.5).toFixed(0), partida,
+    evaluar(plan, Object.assign({}, kw, {minutosRevision: mins * 1.5})).margenPct));
+
+  var rep = (kw && kw.reparaciones) || 0;
+  out.push(caso("Reparaciones por pagina", rep.toFixed(1), (rep + 1).toFixed(1),
+    partida, evaluar(plan, Object.assign({}, kw, {reparaciones: rep + 1})).margenPct));
+
+  var rebajado = {nombre:plan.nombre, precioMes: plan.precioMes * 0.85,
+                  paginas: plan.paginas, minutosRevision: plan.minutosRevision};
+  out.push(caso("Precio negociado", plan.precioMes.toFixed(0) + " $",
+    (plan.precioMes * 0.85).toFixed(0) + " $", partida,
+    evaluar(rebajado, kw).margenPct));
+  return out;
+}
+function caso(palanca, desde, hasta, antes, despues){
+  return {palanca:palanca, desde:desde, hasta:hasta, antes:antes,
+          despues:despues, caida: Math.round((antes - despues) * 10) / 10,
+          rompe: despues < MARGEN_MINIMO * 100};
+}
+
+function puntoMuerto(plan, fijosMes, kw){
+  var r = evaluar(plan, kw);
+  if (r.margenMes <= 0) return {clientes:null, margenCliente:r.margenMes};
+  var clientes = Math.ceil(fijosMes / r.margenMes);
+  var paginas = clientes * plan.paginas;
+  var mins = (kw && kw.minutosRevision !== undefined)
+    ? kw.minutosRevision : plan.minutosRevision;
+  return {clientes:clientes, margenCliente:r.margenMes, paginasMes:paginas,
+          horasRevisionMes: Math.round(paginas * mins / 60 * 10) / 10};
+}
+
+function curvaDeCartera(plan, kw, volumenes){
+  volumenes = volumenes || [1, 2, 3, 5, 8, 12, 20, 40];
+  var puntos = [], umbral = null;
+  volumenes.forEach(function(c){
+    var cartera = c * plan.paginas;
+    var r = evaluar(plan, Object.assign({}, kw, {paginasCartera: cartera}));
+    var sano = r.margenPct >= MARGEN_MINIMO * 100;
+    puntos.push({clientes:c, paginasCartera:cartera, costePagina:r.costePagina,
+                 margenPct:r.margenPct, sano:sano});
+    if (umbral === null && sano) umbral = c;
+  });
+  return {puntos:puntos, umbralClientes:umbral};
+}
+
+function paginasMaximas(plan, kw, objetivo){
+  objetivo = objetivo === undefined ? MARGEN_MINIMO : objetivo;
+  // Punto fijo, no division: el coste por pagina depende de cuantas paginas
+  // tiene el plan, porque el coste fijo se reparte entre ellas.
+  for (var n = plan.paginas; n >= 1; n--){
+    var t = {nombre:plan.nombre, precioMes:plan.precioMes, paginas:n,
+             minutosRevision:plan.minutosRevision};
+    if (evaluar(t, kw).margenPct >= objetivo * 100) return {paginas:n, sobran: plan.paginas - n};
+  }
+  return {paginas:0, sobran: plan.paginas};
+}
+
+function precioMinimo(plan, kw, objetivo, robusto){
+  objetivo = objetivo === undefined ? MARGEN_MINIMO : objetivo;
+  robusto = robusto !== false;
+  var coste = porPagina(opciones(plan, kw)).total * plan.paginas;
+  var base = coste / (1 - objetivo);
+  var precio = base;
+  if (robusto){
+    var mins = (kw && kw.minutosRevision !== undefined)
+      ? kw.minutosRevision : plan.minutosRevision;
+    var o = opciones(plan, kw); o.minutosRevision = mins * 1.5;
+    precio = Math.max(base, porPagina(o).total * plan.paginas / (1 - objetivo));
+  }
+  precio = Math.round(precio / 10) * 10 || 10;
+  return {precio:precio, actual:plan.precioMes, subida: r2(precio - plan.precioMes)};
+}
+
+/* ---------- economia: la pintura ---------- */
+function planesEco(){
+  return $$("#eco-planes tr[data-plan]").map(function(f){
+    var c = f.querySelectorAll("input");
+    return {nombre: c[0].value || "Plan", precioMes: parseFloat(c[1].value) || 0,
+            paginas: Math.max(parseInt(c[2].value, 10) || 1, 1),
+            minutosRevision: parseFloat(c[3].value) || 0};
+  });
+}
+function numEco(sel, d){ var v = parseFloat($(sel).value); return isFinite(v) ? v : d; }
+
+function calcularEconomia(){
+  var u = {input:4000, output:6000, cacheWrite:3000, cacheRead:24000, calls:1};
+  var cartera = numEco("#eco-cartera", 0);
+  var kw = {usage:u, costeHora:numEco("#eco-hora",45),
+            herramientasMes:numEco("#eco-herr",120),
+            reparaciones:numEco("#eco-rep",0.6), lotes:true};
+  if (cartera > 0) kw.paginasCartera = cartera;
+  var fijos = numEco("#eco-fijos", 4000);
+  var planes = planesEco();
+  var h = "";
+
+  h += '<div class="panel"><h3>Margen por plan</h3><div class="scroll"><table>' +
+    '<thead><tr><th>Plan</th><th class="n">$/mes</th><th class="n">Páginas</th>' +
+    '<th class="n">$/página</th><th class="n">Coste/página</th>' +
+    '<th class="n">Margen</th><th>Reparto del coste</th></tr></thead><tbody>';
+  var resultados = planes.map(function(p){ return evaluar(p, kw); });
+  resultados.forEach(function(r){
+    h += "<tr><td>" + esc(r.plan.nombre) + '</td><td class="n">' +
+      r.plan.precioMes.toFixed(0) + '</td><td class="n">' + r.plan.paginas +
+      '</td><td class="n">' + r.precioPagina.toFixed(2) + '</td><td class="n">' +
+      r.costePagina.toFixed(2) + '</td><td class="n">' +
+      (r.sano ? "" : '<span class="rompe">') + r.margenPct.toFixed(0) + "%" +
+      (r.sano ? "" : "</span>") + "</td><td>" + barrasEco(r.reparto) + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+  var peor = resultados.slice().sort(function(a,b){
+    return b.reparto.revision - a.reparto.revision; })[0];
+  if (peor) h += '<p class="note">El reparto es la conclusión, no el margen: en «' +
+    esc(peor.plan.nombre) + "» el modelo es el " + peor.reparto.modelo +
+    "% del coste y la revisión el " + peor.reparto.revision +
+    "%. Competir en precio de tokens es optimizar la parte barata, y bajar de " +
+    "modelo no ahorra: sube los minutos de revisión, que es lo caro.</p>";
+  h += "</div>";
+
+  h += '<div class="panel"><h3>Qué pasa si se mueve una palanca</h3>' +
+    '<p class="note">Un plan con buen margen que se rompe al cronometrar la ' +
+    "revisión no es un plan con buen margen: es un plan que depende de una " +
+    "cifra que nadie ha medido.</p>";
+  planes.forEach(function(p){
+    h += "<h4 style='margin:14px 0 4px;font-size:14px'>" + esc(p.nombre) + "</h4><ul class='lista'>";
+    sensibilidad(p, kw).forEach(function(c){
+      var pts = Math.round(Math.abs(c.caida));
+      h += "<li>" + esc(c.palanca) + ": de " + esc(c.desde) + " a " + esc(c.hasta) +
+        ", el margen " + (c.caida > 0 ? "cae " : "sube ") +
+        pts + (pts === 1 ? " punto" : " puntos") + " hasta " + c.despues.toFixed(0) +
+        "%" + (c.rompe ? ' <span class="rompe">rompe el plan</span>' : "") + "</li>";
+    });
+    h += "</ul>";
+  });
+  h += "</div>";
+
+  h += '<div class="panel"><h3>Viabilidad según el tamaño de la cartera</h3>' +
+    '<p class="note">Las herramientas son coste fijo del negocio: el primer ' +
+    "cliente las carga enteras. Por eso un plan pequeño puede parecer inviable " +
+    "mirándolo aislado, y la decisión correcta no es subir la tarifa por lo que " +
+    "se ve en el cliente uno.</p>";
+  var kwSin = {}; Object.keys(kw).forEach(function(k){ kwSin[k] = kw[k]; });
+  delete kwSin.paginasCartera;
+  planes.forEach(function(p){
+    var cu = curvaDeCartera(p, kwSin);
+    h += "<h4 style='margin:14px 0 6px;font-size:14px'>" + esc(p.nombre) + " — " +
+      (cu.umbralClientes === null
+        ? "no llega al 35% ni con la cartera más grande probada: el problema no es la escala, es el precio o el alcance"
+        : cu.umbralClientes === 1
+          ? "rentable desde el primer cliente"
+          : "hace falta llegar a " + cu.umbralClientes + " clientes para pasar del 35%") +
+      "</h4>";
+    h += '<div class="scroll"><table><thead><tr><th class="n">Clientes</th>' +
+      '<th class="n">Coste/página</th><th class="n">Margen</th></tr></thead><tbody>';
+    cu.puntos.slice(0, 6).forEach(function(pt){
+      h += '<tr><td class="n">' + pt.clientes + '</td><td class="n">' +
+        pt.costePagina.toFixed(2) + ' $</td><td class="n">' +
+        (pt.sano ? "" : '<span class="rompe">') + pt.margenPct.toFixed(0) + "%" +
+        (pt.sano ? "" : "</span>") + "</td></tr>";
+    });
+    h += "</tbody></table></div>";
+  });
+  h += "</div>";
+
+  h += '<div class="panel"><h3>Punto muerto</h3><p class="note">Es la única ' +
+    "cifra que decide si esto es un negocio o un trabajo: si hacen falta más " +
+    "clientes de los que una persona puede atender, el plan está mal puesto por " +
+    "bonito que sea el margen.</p><ul class='lista'>";
+  planes.forEach(function(p){
+    var pm = puntoMuerto(p, fijos, kw);
+    h += "<li>" + (pm.clientes === null
+      ? "<b>" + esc(p.nombre) + "</b> pierde dinero por cliente: no hay punto muerto, hay un agujero que crece con las ventas."
+      : "<b>" + esc(pm.clientes) + " cliente(s) de «" + esc(p.nombre) + "»</b> cubren " +
+        fijos.toFixed(0) + " $/mes de estructura. Son " + pm.paginasMes +
+        " páginas y " + pm.horasRevisionMes + " horas de revisión al mes.") + "</li>";
+  });
+  h += "</ul></div>";
+
+  h += '<div class="panel"><h3>Lo que este cálculo NO cuenta</h3>' +
+    '<p class="note">No caben en un coste por página porque no escalan con las ' +
+    "páginas, sino con los clientes. Son justo las partidas que convierten un " +
+    "margen de folleto en el margen real.</p><ul class='lista'>" +
+    "<li><b>Captación.</b> Reparte sobre la vida del contrato, no sobre el mes.</li>" +
+    "<li><b>Alta y auditoría inicial.</b> El primer mes de un cliente no se parece a los siguientes.</li>" +
+    "<li><b>Gestión de cuenta.</b> Crece con clientes, no con páginas.</li>" +
+    "<li><b>Bajas.</b> Sin tasa de bajas medida, el valor de vida es un deseo.</li>" +
+    '</ul><p class="note">Tarifas de modelo revisadas el ' + TARIFAS_REVISADAS +
+    ". Si esa fecha tiene más de un trimestre, el cálculo sigue corriendo pero " +
+    "los números ya no son los de la factura.</p></div>";
+
+  $("#eco-out").innerHTML = h;
+}
+function barrasEco(rep){
+  var partes = [["modelo", rep.modelo], ["revisión", rep.revision],
+                ["herram.", rep.herramientas]];
+  return '<span class="rep">' + partes.map(function(x){
+    return '<i style="width:' + Math.max(x[1],0) + '%"></i>'; }).join("") +
+    "</span> " + partes.filter(function(x){ return x[1] >= 10; })
+      .map(function(x){ return x[0] + " " + x[1] + "%"; }).join(" · ");
+}
+
+/* ---------- arranque ---------- */
+$$("nav.tabs button").forEach(function(b){
+  b.addEventListener("click", function(){ abrir(b.getAttribute("data-tab")); }); });
+$("#cit-go").addEventListener("click", medirCitabilidad);
+$("#opo-go").addEventListener("click", medirOportunidad);
+$("#clu-go").addEventListener("click", medirClusters);
+$$("#eco-planes input, #eco-hora, #eco-herr, #eco-rep, #eco-cartera, #eco-fijos")
+  .forEach(function(i){ i.addEventListener("input", calcularEconomia); });
+$("#cit-text").addEventListener("input", function(){
+  clearTimeout(window.__t); window.__t = setTimeout(medirCitabilidad, 350); });
+$$("[data-load]").forEach(function(b){
+  b.addEventListener("click", function(){
+    $("#cit-text").value = EJEMPLOS[b.getAttribute("data-load")];
+    medirCitabilidad(); }); });
+
+var EJEMPLOS = {
+  bueno: "# Coste de un sistema septico aerobico\n\n" +
+    "## Cuanto cuesta instalar un sistema aerobico en Texas?\n\n" +
+    "La instalacion completa costo 14.237 $ de mediana en Texas en 2026, sobre una muestra propia de 40 presupuestos reales.\n\n" +
+    "## Cuanto anade el permiso del condado?\n\n" +
+    "El permiso del condado anadio 612 $ de media en 2026 en esa misma muestra, contrastado con [los aranceles de TCEQ](https://tceq.texas.gov/permisos).\n",
+  malo: "# Coste de un sistema septico aerobico\n\n" +
+    "## Introduccion\n\n" +
+    "Un sistema aerobico trata el agua residual de la vivienda. Este cuesta unos 14.000 $ de media.\n\n" +
+    "Tambien hay que contar el permiso municipal, que ronda los 500 $.\n"
+};
+$("#cit-text").value = EJEMPLOS.bueno;
+$("#opo-csv").value = "Consulta,Clics,Impresiones,Posicion\n" +
+  "que es un sistema septico aerobico,160,10000,12\n" +
+  "cuanto cuesta un sistema septico aerobico,40,2200,13\n" +
+  "instalador septico cerca de mi,12,900,11.5\n" +
+  "como funciona la nitrificacion,50,4000,14\n" +
+  "mejor bomba de aire septica,9,700,9\n";
+$("#clu-csv").value = "Keyword,Search Volume,CPC\n" +
+  "sistema septico aerobico,5000,6\n" +
+  "cuanto cuesta un sistema septico aerobico,2000,14\n" +
+  "precio sistema septico aerobico,1500,13\n" +
+  "alarma septica pitando,900,3\n" +
+  "alarma septica no para de pitar,400,3\n" +
+  "mejor bomba de aire septica,700,9\n" +
+  "bomba de aire septica opiniones,300,8\n" +
+  "que es nitrificacion,12000,0.5\n" +
+  "instalador septico cerca de mi,1100,18\n" +
+  "mantenimiento septico aerobico,800,7\n";
+
+
+
+/* ---------- 4. datos propios ---------- */
+function medirDatos(){
+  try{
+    var d = cargarObservaciones($("#dat-csv").value);
+    if (!d.usables.length)
+      throw new Error("Ninguna observacion tiene procedencia completa: hacen falta fuente, fecha (AAAA-MM-DD) y metodo.");
+    var sujeto = ($("#dat-sujeto").value || "El valor medido").trim();
+    var agrupar = ($("#dat-dim").value || "").trim() || null;
+    var est = $("#dat-est").value || "mediana";
+
+    var global = calcular(d, est, null, sujeto)[0];
+    var grupos = agrupar ? calcular(d, est, agrupar, sujeto).filter(function(f){ return f.where; }) : [];
+    var buenas = [global].concat(grupos).filter(function(f){ return f.publishable; });
+    var retenidas = [global].concat(grupos).filter(function(f){ return !f.publishable; });
+
+    var h = '<div class="tiles">' +
+      tile(d.usables.length, "observaciones utilizables") +
+      tile(d.descartadas.length, "descartadas por procedencia",
+           d.descartadas.length ? "var(--warn)" : null) +
+      tile(buenas.length, "cifras publicables") +
+      tile(retenidas.length, "retenidas por muestra", retenidas.length ? "var(--bad)" : null) +
+      "</div>";
+
+    if (d.descartadas.length){
+      h += '<p class="eyebrow" style="margin-top:14px">Descartadas, con el motivo</p><ul class="note">';
+      d.descartadas.slice(0, 8).forEach(function(x){
+        h += "<li>fila " + x.fila + ": " + esc(x.motivos.join(", ")) + "</li>"; });
+      h += "</ul>";
+    }
+
+    if (!buenas.length){
+      h += '<div class="err">Ninguna cifra alcanza la muestra minima. No se publica una anecdota con decimales.</div>';
+      $("#dat-out").innerHTML = h; return;
+    }
+
+    h += '<p class="eyebrow" style="margin-top:16px">Frases citables que produce</p>';
+    buenas.forEach(function(f){
+      var frase = fraseDe(f, sujeto);
+      var r = analyse("## ¿" + sujeto + "?\n\n" + frase);
+      var nota = r.liftable.length ? r.liftable[0].total : (r.quotes.length ? r.quotes[0].total : 0);
+      h += '<div class="quote' + (r.liftable.length ? "" : " no") + '"><span class="tag">' +
+        "citabilidad " + nota + "/100 · n=" + f.n + (f.where ? " · " + esc(f.where) : "") +
+        "</span>" + esc(frase) + "</div>";
+    });
+
+    if (retenidas.length){
+      h += '<p class="eyebrow" style="margin-top:18px">Lo que no se publica, y por que</p><ul class="note">';
+      retenidas.forEach(function(f){
+        h += "<li><strong>" + esc(f.where || "global") + "</strong>: " + esc(f.whyNot) + "</li>"; });
+      h += "</ul>";
+      h += '<p class="note">Esta seccion es la que da credibilidad al resto: una pagina de datos que no dice lo que no mide no es una pagina de datos.</p>';
+    }
+
+    if (grupos.length){
+      h += '<div class="scroll"><table><thead><tr><th>' + esc(agrupar) +
+        "</th><th>" + est.charAt(0).toUpperCase() + est.slice(1) +
+        "</th><th>Observaciones</th><th>Periodo</th><th>Publicable</th></tr></thead><tbody>";
+      grupos.forEach(function(f){
+        h += "<tr><td>" + esc(f.where) + '</td><td class="n">' + f.formatted +
+          '</td><td class="n">' + f.n + "</td><td>" + esc(f.period || "—") +
+          '</td><td><span class="pill ' + (f.publishable ? "g" : "b") + '">' +
+          (f.publishable ? "si" : "no") + "</span></td></tr>";
+      });
+      h += "</tbody></table></div>";
+    }
+    $("#dat-out").innerHTML = h;
+  } catch(e){
+    $("#dat-out").innerHTML = '<div class="err">' + esc(e.message) + "</div>";
+  }
+}
+$("#dat-go").addEventListener("click", medirDatos);
+$("#dat-csv").value = "valor,unidad,fuente,fecha,metodo,condado\n" +
+  "14237,$,Septic Pros LLC,2026-03-12,presupuesto pedido por telefono,Travis\n" +
+  "15890,$,AeroWaste Inc,2026-03-14,presupuesto pedido por telefono,Travis\n" +
+  "13100,$,Lone Star Septic,2026-04-02,presupuesto pedido por telefono,Travis\n" +
+  "16740,$,Hill Country Septic,2026-04-11,presupuesto pedido por telefono,Travis\n" +
+  "14980,$,Capital Waste,2026-04-19,presupuesto pedido por telefono,Travis\n" +
+  "15310,$,TX Aerobic,2026-05-03,presupuesto pedido por telefono,Travis\n" +
+  "13890,$,Alamo Septic,2026-05-08,presupuesto pedido por telefono,Travis\n" +
+  "16120,$,RiverCity Systems,2026-05-21,presupuesto pedido por telefono,Travis\n" +
+  "15600,$,Bluebonnet Env,2026-06-02,presupuesto pedido por telefono,Bexar\n" +
+  "14420,$,South TX Septic,2026-06-09,presupuesto pedido por telefono,Bexar\n" +
+  "21000,$,Gulf Septic,2026-06-15,presupuesto pedido por telefono,Harris\n" +
+  "16000,$,,2026-06-16,presupuesto,Harris\n" +
+  "15200,$,NoDate Septic,,presupuesto,Bexar\n";
+medirDatos();
+
+abrir("citabilidad");
+medirCitabilidad();
+calcularEconomia();
+medirOportunidad();
+medirClusters();
+
+</script>

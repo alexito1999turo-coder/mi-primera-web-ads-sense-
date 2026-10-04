@@ -1,0 +1,12 @@
+[
+ {"nombre":"Core","precio":299,"paginas":12,"mins":12,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":300,"fijos":4000},
+ {"nombre":"Scale","precio":699,"paginas":24,"mins":12,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":300,"fijos":4000},
+ {"nombre":"Core-solo","precio":299,"paginas":12,"mins":12,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":0,"fijos":4000},
+ {"nombre":"Senior","precio":299,"paginas":12,"mins":12,"hora":70,"herr":120,"rep":0.6,"lotes":true,"cartera":300,"fijos":4000},
+ {"nombre":"MesMalo","precio":699,"paginas":24,"mins":18,"hora":45,"herr":120,"rep":1.2,"lotes":false,"cartera":300,"fijos":4000},
+ {"nombre":"Micro","precio":99,"paginas":4,"mins":20,"hora":45,"herr":120,"rep":0.0,"lotes":true,"cartera":0,"fijos":1000},
+ {"nombre":"Regalado","precio":60,"paginas":24,"mins":12,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":300,"fijos":4000},
+ {"nombre":"SinHerr","precio":490,"paginas":8,"mins":14,"hora":45,"herr":0,"rep":0.6,"lotes":true,"cartera":0,"fijos":4000},
+ {"nombre":"Cartera","precio":2900,"paginas":60,"mins":9,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":600,"fijos":4000},
+ {"nombre":"SinRevision","precio":299,"paginas":12,"mins":0,"hora":45,"herr":120,"rep":0.6,"lotes":true,"cartera":300,"fijos":4000}
+]

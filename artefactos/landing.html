@@ -1,0 +1,738 @@
+<title>Citado, no publicado</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Informe comercial: una columna de lectura con los gráficos a sangre.
+   Display en grotesca estrecha, cuerpo en serif de lectura, cifras en mono.
+   La cifra medida es siempre mono: en esta página el dato manda sobre la frase. */
+:root{
+  --ground:#f4f5f7; --panel:#ffffff; --edge:#dcdfe5; --edge-soft:#e9ebef;
+  --ink:#12161d; --ink-2:#4e5663; --ink-3:#848c99;
+  --accent:#2a78d6; --accent-soft:#e9f0fb;
+  --alert:#e34948; --alert-soft:#fcecec;
+  --surface-1:#fcfcfb;
+  --mute:#b9bfc9;
+  --display:"Archivo",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0e1116; --panel:#161a21; --edge:#2a3039; --edge-soft:#222831;
+  --ink:#eef1f6; --ink-2:#a3abb8; --ink-3:#737c8a;
+  --accent:#3987e5; --accent-soft:#132334;
+  --alert:#e66767; --alert-soft:#2b1718;
+  --surface-1:#1a1a19;
+  --mute:#4a525e;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0e1116; --panel:#161a21; --edge:#2a3039; --edge-soft:#222831;
+  --ink:#eef1f6; --ink-2:#a3abb8; --ink-3:#737c8a;
+  --accent:#3987e5; --accent-soft:#132334;
+  --alert:#e66767; --alert-soft:#2b1718;
+  --surface-1:#1a1a19;
+  --mute:#4a525e;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding-inline:20px;padding-block:44px 72px}
+h1,h2,h3,.eyebrow,.num,th,.btn{font-family:var(--display)}
+h1{font-size:clamp(34px,7vw,60px);font-weight:800;line-height:1.02;
+  letter-spacing:-.03em;margin:0;text-wrap:balance}
+h2{font-size:clamp(24px,4.2vw,34px);font-weight:700;line-height:1.1;
+  letter-spacing:-.02em;margin:0 0 10px;text-wrap:balance}
+h3{font-size:19px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+p{margin:0 0 16px}
+.lede{font-size:clamp(18px,2.4vw,21px);color:var(--ink-2);max-width:60ch;
+  margin-top:18px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 10px}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.94em}
+section{margin-top:60px}
+.note{font-size:14.5px;color:var(--ink-3);max-width:68ch}
+.rule{border:0;border-top:1px solid var(--edge);margin:0}
+
+/* hero */
+.hero-fig{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  margin-top:30px;padding-top:26px;border-top:3px solid var(--ink)}
+.hero-fig b{font-family:var(--display);font-size:clamp(54px,12vw,96px);
+  font-weight:800;line-height:.9;letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums}
+.hero-fig span{font-size:16px;color:var(--ink-2);max-width:34ch;line-height:1.4}
+
+/* gráficos */
+figure{margin:22px 0 0;background:var(--panel);border:1px solid var(--edge);
+  border-radius:10px;padding:20px 18px 16px}
+figure figcaption{font-size:13.5px;color:var(--ink-3);margin-top:12px;
+  padding-top:12px;border-top:1px solid var(--edge-soft);line-height:1.5}
+figure .title{font-family:var(--display);font-weight:700;font-size:16px;
+  margin-bottom:2px}
+figure .sub{font-size:13px;color:var(--ink-3);margin-bottom:16px}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.tick{font-family:var(--mono);font-size:11px;fill:var(--ink-3)}
+.lab{font-family:var(--display);font-size:12.5px;font-weight:600;fill:var(--ink-2)}
+.val{font-family:var(--mono);font-size:12.5px;font-weight:600;fill:var(--ink)}
+.grid-line{stroke:var(--edge-soft);stroke-width:1}
+.axis{stroke:var(--edge);stroke-width:1}
+.bar{rx:3}
+.hit{fill:transparent;cursor:default}
+#tip{position:fixed;z-index:40;pointer-events:none;opacity:0;
+  transition:opacity .12s;background:var(--ink);color:var(--ground);
+  font-family:var(--mono);font-size:12px;line-height:1.45;padding:7px 10px;
+  border-radius:6px;max-width:260px}
+#tip.on{opacity:1}
+details.tabla{margin-top:12px;font-size:13.5px}
+details.tabla summary{cursor:pointer;color:var(--accent);
+  font-family:var(--display);font-weight:600;font-size:13px}
+details.tabla table{width:100%;border-collapse:collapse;margin-top:10px;
+  font-size:13px}
+details.tabla th,details.tabla td{text-align:left;padding:6px 8px;
+  border-bottom:1px solid var(--edge-soft)}
+details.tabla th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);font-weight:700}
+details.tabla td.n{font-family:var(--mono);text-align:right;
+  font-variant-numeric:tabular-nums}
+
+/* servicios */
+.svc{display:grid;gap:1px;background:var(--edge);border:1px solid var(--edge);
+  border-radius:10px;overflow:hidden;margin-top:22px}
+@media (min-width:660px){.svc{grid-template-columns:1fr 1fr}
+  .svc article.ancho{grid-column:1 / -1}}
+.svc article{background:var(--panel);padding:20px 18px}
+.svc .n{font-family:var(--mono);font-size:11px;color:var(--accent);
+  font-weight:600;letter-spacing:.08em}
+.svc p{font-size:15px;color:var(--ink-2);margin:6px 0 0;line-height:1.52}
+.only{display:inline-block;font-family:var(--mono);font-size:10px;
+  letter-spacing:.08em;text-transform:uppercase;background:var(--accent-soft);
+  color:var(--accent);padding:2px 7px;border-radius:9px;margin-left:7px;
+  vertical-align:2px}
+
+/* precios */
+.plans{display:grid;gap:12px;margin-top:22px}
+@media (min-width:660px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--panel);border:1px solid var(--edge);border-radius:10px;
+  padding:20px 18px;display:flex;flex-direction:column;gap:10px}
+.plan.hi{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.plan .p{font-family:var(--display);font-size:30px;font-weight:800;
+  line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.plan .p small{font-size:14px;font-weight:600;color:var(--ink-3);
+  letter-spacing:0}
+.plan ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--ink-2);
+  line-height:1.5}
+.plan ul li{margin-bottom:5px}
+
+/* honestidad */
+.honest{background:var(--alert-soft);border:1px solid var(--alert);
+  border-radius:10px;padding:22px 20px;margin-top:22px}
+.honest h3{color:var(--alert)}
+.honest p{font-size:15.5px;margin-bottom:12px}
+.honest p:last-child{margin-bottom:0}
+
+.cta{margin-top:26px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-block;background:var(--ink);color:var(--ground);
+  font-weight:700;font-size:15px;padding:13px 22px;border-radius:7px;
+  text-decoration:none;border:1px solid var(--ink)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.foot{margin-top:60px;padding-top:22px;border-top:1px solid var(--edge);
+  font-size:13.5px;color:var(--ink-3)}
+.foot a{color:var(--ink-2)}
+
+.flow{display:grid;gap:1px;background:var(--edge);border:1px solid var(--edge);
+  border-radius:10px;overflow:hidden;margin-top:22px}
+@media (min-width:560px){.flow{grid-template-columns:1fr 1fr}}
+@media (min-width:860px){.flow{grid-template-columns:repeat(4,1fr)}}
+.flow .step{background:var(--panel);padding:18px 16px}
+.flow .n{font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--accent);display:block;margin-bottom:4px}
+.flow h3{font-size:16px;margin-bottom:4px}
+.flow p{font-size:14px;color:var(--ink-2);margin:0;line-height:1.5}
+.prob{display:grid;gap:12px;margin-top:22px}
+@media (min-width:660px){.prob{grid-template-columns:1fr 1fr}}
+.prob > div{background:var(--panel);border:1px solid var(--edge);
+  border-radius:10px;padding:16px 18px}
+.prob .sint{font-family:var(--display);font-weight:700;font-size:16px;
+  display:block;color:var(--alert)}
+.prob p{font-size:14.5px;color:var(--ink-2);margin:6px 0 0;line-height:1.5}
+.scroll{overflow-x:auto}
+table.costes{width:100%;border-collapse:collapse;font-size:14.5px;min-width:440px}
+table.costes th,table.costes td{text-align:left;padding:10px 10px;
+  border-bottom:1px solid var(--edge-soft);vertical-align:top}
+table.costes th{font-family:var(--display);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
+table.costes td.n{font-family:var(--mono);text-align:right;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+table.costes .sub2{font-size:12.5px;color:var(--ink-3);line-height:1.4}
+table.costes tr.sub-total td{border-top:1px solid var(--edge)}
+table.costes tr.destacada td{background:var(--accent-soft)}
+table.costes tr.total td{border-top:2px solid var(--ink);
+  border-bottom:2px solid var(--ink)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<div class="wrap">
+
+<p class="eyebrow">SEO y GEO con cumplimiento</p>
+<h1>Citado, no publicado.</h1>
+<p class="lede">Toda la categoría vende lo mismo: treinta artículos al mes
+publicados en autopiloto. Es un producto de 2023 vendido en 2026, porque el
+artículo informacional ya no recibe el clic.</p>
+
+<div class="hero-fig">
+  <b>74,3<span style="font-size:.45em">%</span></b>
+  <span>de las búsquedas informacionales acaban <strong>sin un solo clic</strong>.
+  La cobertura de AI Overviews en ese tipo de consulta es del 99,9%.</span>
+</div>
+
+<section>
+  <p class="eyebrow">Qué es</p>
+  <h2>Un sistema que decide qué publicar, lo produce y demuestra que no te mete en un problema</h2>
+  <p>No es una herramienta de escribir artículos con un botón. Son doce piezas
+  encadenadas que van del dato en bruto a la página publicada, y cada una puede
+  frenar a la siguiente cuando algo no cumple.</p>
+
+  <div class="flow">
+    <div class="step"><span class="n">1</span><h3>Audita</h3>
+      <p>Mide tu sitio en vivo: archivos que compiten contra tus artículos,
+      canibalización, sitemaps, y qué parte de tu contenido está expuesta a
+      quedarse sin clic.</p></div>
+    <div class="step"><span class="n">2</span><h3>Planifica</h3>
+      <p>Agrupa tus keywords en clusters con <strong>solape cero</strong>: ninguna
+      se asigna a dos páginas, y las casi idénticas se fusionan en vez de generar
+      dos páginas que compiten.</p></div>
+    <div class="step"><span class="n">3</span><h3>Mide tus datos</h3>
+      <p>Convierte observaciones con procedencia en cifras agregadas que no
+      existen en ningún otro sitio, y se niega a publicar las que no tienen
+      muestra suficiente.</p></div>
+    <div class="step"><span class="n">4</span><h3>Escribe</h3>
+      <p>Produce cada página contra un brief que exige qué aporta que no esté ya
+      en el top 10, con el dato propio y las fuentes obligatorias.</p></div>
+    <div class="step"><span class="n">5</span><h3>Frena</h3>
+      <p>Nueve comprobaciones que bloquean: sin fuente enlazada, sin dato propio,
+      cifras sin respaldo, relleno de keyword, solape con lo ya publicado, sin
+      una sola frase citable.</p></div>
+    <div class="step"><span class="n">6</span><h3>Revisa</h3>
+      <p>Reparte los minutos del revisor por riesgo, no a ciegas, y registra cada
+      rechazo con la instrucción que lo habría evitado para que no se repita.</p></div>
+    <div class="step"><span class="n">7</span><h3>Publica</h3>
+      <p>A tu WordPress en borrador por defecto, con los datos estructurados y el
+      enlazado interno puestos. El autopiloto hay que pedirlo.</p></div>
+    <div class="step"><span class="n">8</span><h3>Demuestra</h3>
+      <p>Un dossier mensual que mapea lo publicado contra la política de Google,
+      fila por fila, con «no medido» donde no se midió.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Qué resuelve</p>
+  <h2>Cinco problemas concretos, no «mejorar tu SEO»</h2>
+  <div class="prob">
+    <div><span class="sint">Publicas y no sube nada</span>
+      <p>Normalmente porque tus propias categorías y archivos de autor compiten
+      contra tus artículos. La auditoría los encuentra y prefiere recategorizar
+      antes que ocultar.</p></div>
+    <div><span class="sint">Rankeas pero no entra nadie</span>
+      <p>El contenido informacional puro lo contesta la respuesta generada. El
+      planificador desplaza el esfuerzo a intención donde el clic sobrevive.</p></div>
+    <div><span class="sint">El contenido suena a nadie</span>
+      <p>Porque es una reescritura del top 10. Sin un dato propio con método, la
+      página no llega siquiera a generarse.</p></div>
+    <div><span class="sint">No sabes si te están citando</span>
+      <p>Medimos qué hace citable una frase y lo decimos <em>antes</em> de
+      publicar, no después de rastrear.</p></div>
+    <div><span class="sint">Te da miedo que te penalicen</span>
+      <p>Siete reglas implementadas como bloqueos, y un documento mensual que
+      enseña el cumplimiento fila por fila.</p></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">El problema</p>
+  <h2>Posicionar ya no es lo mismo que recibir la visita</h2>
+  <p>Una página puede subir al primer resultado y perder tráfico, porque la
+  respuesta generada se queda el clic antes de que nadie llegue. El efecto no es
+  igual en todas las búsquedas: depende de si la consulta se puede contestar sin
+  salir del buscador.</p>
+
+  <figure>
+    <div class="title">Cuánto clic sobrevive a la respuesta generada</div>
+    <div class="sub">Por tipo de intención de búsqueda · más alto es mejor</div>
+    <svg viewBox="0 0 640 230" role="img"
+         aria-label="Barras: el clic que sobrevive por intención. Informacional 48%, sin señal clara 65%, comercial 74%, transaccional 88%.">
+      <g id="g-retencion"></g>
+    </svg>
+    <figcaption>Calculado desde la exposición medida a AI Overviews por tipo de
+    consulta. Es un prior de mercado, no una medición de un sitio concreto: el
+    sistema lo declara como tal en cada informe que imprime.</figcaption>
+    <details class="tabla"><summary>Ver los datos</summary>
+      <table><thead><tr><th>Intención</th><th>Exposición a AIO</th><th>Clic que sobrevive</th></tr></thead>
+      <tbody>
+        <tr><td>Informacional</td><td class="n">90%</td><td class="n">48%</td></tr>
+        <tr><td>Sin señal clara</td><td class="n">60%</td><td class="n">65%</td></tr>
+        <tr><td>Comercial</td><td class="n">45%</td><td class="n">74%</td></tr>
+        <tr><td>Transaccional</td><td class="n">20%</td><td class="n">88%</td></tr>
+      </tbody></table>
+    </details>
+  </figure>
+</section>
+
+<section>
+  <p class="eyebrow">Lo que cambia</p>
+  <h2>Priorizar por clics es priorizar volumen con otro nombre</h2>
+  <p>Cualquier herramienta de la categoría ordena las oportunidades por clics
+  estimados. Nosotros las ordenamos por <strong>valor esperado</strong>: el clic
+  descontado por lo que se queda la respuesta generada, y ponderado por lo que
+  vale ese clic según la intención. El orden se da la vuelta.</p>
+
+  <figure>
+    <div class="title">La misma cartera, ordenada de dos formas</div>
+    <div class="sub">Izquierda: por clics estimados. Derecha: por valor esperado.
+    Cinco consultas reales pasadas por el motor.</div>
+    <svg viewBox="0 0 640 310" role="img"
+         aria-label="Gráfico de pendiente: al ordenar por valor en vez de por clics, la consulta transaccional pasa del puesto 5 al 1 y las dos informacionales caen del 1 y 2 al 4 y 5.">
+      <g id="g-pendiente"></g>
+    </svg>
+    <figcaption>El dato incómodo, que dejamos fijado en una prueba automática:
+    <strong>descontar las AI Overviews por sí solo no cambia el orden</strong>.
+    Una consulta informacional de 10.000 impresiones sigue ganando a una
+    comercial de 2.200 aunque le quites la mitad del clic. Lo que invierte el
+    orden es el descuento <em>más</em> el valor del clic.</figcaption>
+    <details class="tabla"><summary>Ver los datos</summary>
+      <table><thead><tr><th>Consulta</th><th>Impresiones</th><th>Clics est.</th><th>Valor</th></tr></thead>
+      <tbody>
+        <tr><td>instalador séptico cerca de mí</td><td class="n">900</td><td class="n">+21</td><td class="n">46</td></tr>
+        <tr><td>mejor bomba de aire séptica</td><td class="n">700</td><td class="n">+57</td><td class="n">42</td></tr>
+        <tr><td>cuánto cuesta un sistema séptico</td><td class="n">2.200</td><td class="n">+57</td><td class="n">42</td></tr>
+        <tr><td>qué es un sistema séptico aeróbico</td><td class="n">10.000</td><td class="n">+240</td><td class="n">17</td></tr>
+        <tr><td>cómo funciona la nitrificación</td><td class="n">4.000</td><td class="n">+108</td><td class="n">8</td></tr>
+      </tbody></table>
+    </details>
+  </figure>
+</section>
+
+<section>
+  <p class="eyebrow">El hueco</p>
+  <h2>Su calidad no es un límite de coste. Es una decisión.</h2>
+  <p>El líder de la categoría cobra 49 $ al mes por treinta artículos. Generar
+  esos treinta artículos cuesta unos <span class="m">10 $</span> en modelo. Podrían
+  gastar diez veces más y seguir ganando dinero. No lo hacen porque su precio
+  ancla se lo impide, y la queja se repite reseña tras reseña.</p>
+
+  <figure>
+    <div class="title">Calidad de contenido valorada por usuarios</div>
+    <div class="sub">Sobre 5 · medido por terceros, no por nosotros</div>
+    <svg viewBox="0 0 640 210" role="img"
+         aria-label="Barras: calidad de contenido sobre 5. El líder de SEO automatizado 2,1; Writesonic 3,6; Jasper 3,8. La nuestra aparece sin medir.">
+      <g id="g-calidad"></g>
+    </svg>
+    <figcaption>La nuestra aparece <strong>sin medir</strong> a propósito.
+    Publicar una cifra propia sin un evaluador independiente sería exactamente lo
+    que le criticamos a la competencia. Se mide a ciegas, con rúbrica escrita
+    antes de generar, y hasta entonces no se dice.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <p class="eyebrow">El servicio</p>
+  <h2>Siete cosas que no encontrarás en la categoría</h2>
+  <p class="note">No son promesas de folleto: cada una está implementada como una
+  comprobación que bloquea la publicación cuando no se cumple.</p>
+
+  <div class="svc">
+    <article>
+      <span class="n">01</span>
+      <h3>Dossier de cumplimiento <span class="only">solo aquí</span></h3>
+      <p>Un documento mensual que mapea lo publicado contra los cinco patrones de
+      <em>scaled content abuse</em> de la política de Google y contra la política
+      de reputación de sitio, con el dato medido en cada fila y «no medido» donde
+      no se midió. Es lo que una agencia necesita para no incendiar la web de su
+      cliente.</p>
+    </article>
+    <article>
+      <span class="n">02</span>
+      <h3>Ingeniería de citabilidad <span class="only">solo aquí</span></h3>
+      <p>Los demás <em>rastrean</em> citaciones en ChatGPT o Perplexity: un
+      termómetro que dice lo que ya pasó. Nosotros medimos qué hace que una frase
+      se pueda citar — que se sostenga sola, que lleve quién, cuándo y cómo, y que
+      el dato no esté en otras cincuenta fuentes — y lo decimos antes de publicar.</p>
+    </article>
+    <article>
+      <span class="n">03</span>
+      <h3>Datos propios con procedencia</h3>
+      <p>La agregación crea originalidad: cuarenta presupuestos pueden ser
+      públicos uno a uno, pero su mediana por condado no existe en ningún otro
+      sitio. Ese dato es el activo que atrae enlaces de verdad, y sustituye a la
+      red de intercambio que el resto de la categoría usa.</p>
+    </article>
+    <article>
+      <span class="n">04</span>
+      <h3>Compuertas calibradas <span class="only">solo aquí</span></h3>
+      <p>Las reglas de calidad son heurísticas que escribió alguien, así que
+      medimos las nuestras contra el criterio del revisor y las subimos, bajamos o
+      retiramos según acierten. Con el límite inferior de Wilson, porque tres
+      aciertos de tres es 0,44 y no 1,00.</p>
+    </article>
+    <article>
+      <span class="n">05</span>
+      <h3>Auditoría de huella de cartera <span class="only">solo aquí</span></h3>
+      <p>Veinte sitios con el mismo esqueleto de encabezados son una granja de
+      contenido en agregado, aunque cada uno parezca limpio por separado. Es el
+      riesgo que tumba un negocio entero de golpe en vez de cliente a cliente, y
+      nadie en la categoría lo mide.</p>
+    </article>
+    <article>
+      <span class="n">06</span>
+      <h3>Archivos finos y canibalización</h3>
+      <p>Las auditorías del sector ven metadatos ausentes. La nuestra encuentra
+      los archivos de autor, categoría y etiqueta que compiten contra tus propios
+      artículos, y prefiere recategorizar antes que ocultar: arreglar la causa en
+      vez del síntoma.</p>
+    </article>
+  </div>
+
+  <div class="svc" style="margin-top:12px;grid-template-columns:1fr">
+    <article>
+      <span class="n">07</span>
+      <h3>Tope de 24 páginas al mes, y se vende como virtud</h3>
+      <p>El plan superior de la competencia publica 120 al mes: cuatro al día en
+      un dominio sin revisión, que es literalmente el patrón que Google sancionó
+      en 2026. El volumen es el riesgo, no el producto. Menos páginas, mejores,
+      medidas por si aparecen en la respuesta.</p>
+    </article>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Coste de mantenimiento</p>
+  <h2>Lo que cuesta tenerlo funcionando, enseñado entero</h2>
+  <p>Esta es la parte que ninguna landing de la categoría enseña. Son los costes
+  reales de operar un sitio durante un mes, con los precios de API verificados.</p>
+
+  <figure style="padding-bottom:20px">
+    <div class="title">Coste operativo mensual por sitio</div>
+    <div class="sub">Plan Core, 12 páginas al mes</div>
+    <div class="scroll">
+    <table class="costes">
+      <thead><tr><th>Partida</th><th>Coste</th><th>Quién lo paga</th></tr></thead>
+      <tbody>
+        <tr><td>Generación con modelo de gama alta<br><span class="sub2">pipeline de 4 pasos, caché de prompt y API de lotes al 50%</span></td><td class="n">4–8 $</td><td>nosotros</td></tr>
+        <tr><td>Datos de SERP y keywords</td><td class="n">4–6 $</td><td>nosotros</td></tr>
+        <tr><td>Imágenes e infografías</td><td class="n">2–6 $</td><td>nosotros</td></tr>
+        <tr><td>Seguimiento de citaciones, 20 prompts semanales</td><td class="n">&lt; 2 $</td><td>nosotros</td></tr>
+        <tr><td>Search Console y Analytics</td><td class="n">0 $</td><td>—</td></tr>
+        <tr><td>Infraestructura<br><span class="sub2">compartida entre 50–100 sitios</span></td><td class="n">1–2 $</td><td>nosotros</td></tr>
+        <tr class="sub-total"><td><strong>Subtotal de máquina</strong></td><td class="n"><strong>11–24 $</strong></td><td>nosotros</td></tr>
+        <tr class="destacada"><td><strong>Revisión humana</strong><br><span class="sub2">12 páginas × 8–12 min, el coste dominante</span></td><td class="n"><strong>40–60 $</strong></td><td>nosotros</td></tr>
+        <tr class="total"><td><strong>Coste total de operar tu sitio</strong></td><td class="n"><strong>51–84 $</strong></td><td>nosotros</td></tr>
+        <tr><td><strong>Lo que pagas tú en herramientas</strong><br><span class="sub2">sin suscripción de SEO, sin plugin de pago, sin créditos</span></td><td class="n"><strong>0 $</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>El coste dominante no es el modelo, es la persona. Por eso
+    gastamos de más en generación: subir la calidad del borrador baja los minutos
+    de revisión, y <strong>cada dólar extra en el modelo ahorra unos doce en
+    edición</strong>. Es la cuenta que el precio de 49 $ de la competencia hace
+    imposible.</figcaption>
+  </figure>
+
+  <div class="svc" style="margin-top:14px">
+    <article><h3>Lo que no te cobramos aparte</h3>
+      <p>Ni créditos de generación, ni suscripción a una herramienta de keywords,
+      ni plugin de pago, ni coste por idioma. El plan incluye las páginas, el
+      seguimiento, el dossier y el activo de datos.</p></article>
+    <article><h3>Lo que cuesta dejarlo</h3>
+      <p>Nada, y las páginas se quedan en tu WordPress con sus datos
+      estructurados. No hay red de enlaces que se caiga al dejar de pagar, porque
+      no usamos una: los enlaces que gane tu dataset son tuyos.</p></article>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Precios</p>
+  <h2>Seis veces su precio de entrada, y se sostiene</h2>
+  <p>Cobramos por lo único de lo que se queja todo su mercado. El coste variable
+  por sitio está entre <span class="m">15</span> y <span class="m">25 $</span> al
+  mes; el resto es revisión humana de verdad, que es lo que su precio de 49 $
+  hace imposible.</p>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="p">299 $ <small>una vez</small></div>
+      <h3>Diagnóstico</h3>
+      <ul>
+        <li>Auditoría completa del sitio</li>
+        <li>Plan de clusters con solape cero</li>
+        <li>Oportunidad ordenada por valor</li>
+        <li>Plan de 90 días</li>
+      </ul>
+    </div>
+    <div class="plan hi">
+      <div class="p">299 $ <small>/ mes</small></div>
+      <h3>Core</h3>
+      <ul>
+        <li>12 páginas de intención comercial</li>
+        <li>20 prompts de visibilidad medidos</li>
+        <li>Dossier de cumplimiento mensual</li>
+        <li>Un activo de datos al trimestre</li>
+      </ul>
+    </div>
+    <div class="plan">
+      <div class="p">699 $ <small>/ mes</small></div>
+      <h3>Scale</h3>
+      <ul>
+        <li>24 páginas, el tope</li>
+        <li>50 prompts medidos</li>
+        <li>Un activo de datos al mes</li>
+        <li>Estratega asignado</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:14px">Marca blanca para agencias:
+  <span class="m">3.000 $</span> de implantación y <span class="m">249 $</span>
+  por sitio y mes, con el dossier de cumplimiento por cliente. La garantía se
+  define por escrito antes de firmar — clics orgánicos en Search Console,
+  comparando dos ventanas de 28 días — porque una garantía sin definición es una
+  disputa esperando a ocurrir.</p>
+</section>
+
+<section>
+  <p class="eyebrow">La prueba del precio</p>
+  <h2>El precio aguanta, y aquí está la cuenta que lo demuestra</h2>
+  <p>Un precio que no sale de un coste medido es una cifra de folleto: dura hasta
+  el primer cliente que pide veinte páginas al mes. Estos números no están
+  escritos a mano — los calcula el propio sistema, con el consumo real de tokens
+  por página y la tarifa de API con su fecha de revisión.</p>
+
+  <figure style="padding-bottom:20px">
+    <div class="title">Margen por escenario de revisión</div>
+    <div class="sub">La única variable que decide esto es quién revisa y cuánto tarda</div>
+    <div class="scroll">
+    <table class="costes">
+      <thead><tr><th>Escenario</th><th>Coste/página</th><th>Core 299 $</th><th>Scale 699 $</th></tr></thead>
+      <tbody>
+        <tr><td>Revisor junior, 25 $/h · 12 min</td><td class="n">5,88 $</td><td class="n">76 %</td><td class="n">80 %</td></tr>
+        <tr class="destacada"><td><strong>Tu propio tiempo, 45 $/h · 12 min</strong><br><span class="sub2">el supuesto que usamos para decidir</span></td><td class="n"><strong>9,88 $</strong></td><td class="n"><strong>60 %</strong></td><td class="n"><strong>66 %</strong></td></tr>
+        <tr><td>Editor sénior, 70 $/h · 12 min</td><td class="n">14,88 $</td><td class="n">40 %</td><td class="n">49 %</td></tr>
+        <tr><td>45 $/h pero 18 min por página<br><span class="sub2">el mes malo: cliente nuevo, nicho raro</span></td><td class="n">14,38 $</td><td class="n">42 %</td><td class="n">51 %</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>El peor escenario razonable sigue dejando <strong>40 %</strong>. Eso
+    es lo que significa que un precio aguante: no que el margen sea bonito en la
+    hoja de cálculo, sino que siga en pie cuando se mueve la cifra que nadie ha
+    cronometrado todavía.</figcaption>
+  </figure>
+
+  <div class="svc" style="margin-top:14px">
+    <article><h3>El modelo es la parte barata</h3>
+      <p>En el plan grande, la generación es el <span class="m">5 %</span> del
+      coste y la revisión el <span class="m">73 %</span>. Quien compite en precio
+      de tokens está optimizando lo barato — y bajar de modelo no ahorra: sube los
+      minutos de revisión, que es lo caro.</p></article>
+    <article><h3>Core necesita dos clientes, no uno</h3>
+      <p>Las herramientas son coste fijo del negocio, no del cliente: el primero
+      lo carga entero. Con un solo cliente Core deja <span class="m">22 %</span>;
+      a partir del segundo pasa del <span class="m">35 %</span>. Scale es rentable
+      desde el primero. Lo decimos porque la decisión correcta no es subir la
+      tarifa por lo que se ve en el cliente uno.</p></article>
+    <article class="ancho"><h3>Lo que esta cuenta NO incluye</h3>
+      <p>Captación, el alta del primer mes, la gestión de cuenta y las bajas. No
+      caben en un coste por página porque no escalan con las páginas, sino con los
+      clientes. Son justo las partidas que convierten un margen de folleto en el
+      margen real, y por eso van dichas.</p></article>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Lo que no te vamos a contar</p>
+  <h2>No tenemos todavía resultados de cliente</h2>
+  <div class="honest">
+    <h3>Esto es lo que hay, dicho entero</h3>
+    <p>El sistema <strong>no se ha ejecutado contra un sitio en producción</strong>.
+    Está construido y verificado en tres niveles — lógica, transporte sobre
+    sockets reales y la aplicación completa de punta a punta — con 459 pruebas
+    automáticas, pero no hay un cliente con una gráfica que enseñar.</p>
+    <p>Las cifras de esta página son de tres tipos y conviene no mezclarlos: datos
+    de mercado medidos por terceros (la cobertura de AI Overviews, la calidad
+    valorada de la competencia), cálculos del propio sistema sobre datos de
+    ejemplo (la inversión del orden), y priores declarados que se sustituirán por
+    mediciones en cuanto existan (la curva de CTR, el valor del clic).</p>
+    <p>Cualquiera puede ponerte una gráfica de resultados en una landing. Que
+    nosotros no la tengamos es información, y preferimos que la tengas antes de
+    pagar que después.</p>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Empezar</p>
+  <h2>La auditoría es gratis y tarda treinta segundos</h2>
+  <p>No es un formulario para captar tu correo. Es la herramienta que encuentra
+  los archivos que compiten contra tus artículos, y te dice qué hacer con cada
+  uno — recategorizar cuando hay artículos huérfanos reasignables, ocultar solo
+  cuando no los hay.</p>
+  <div class="cta">
+    <a class="btn" href="#">Pedir la auditoría</a>
+    <a class="btn ghost" href="#">Ver el banco de pruebas</a>
+  </div>
+</section>
+
+<p class="foot">Las gráficas de esta página se construyeron con una paleta
+validada contra los seis controles de color, incluida la separación para
+daltonismo. Cada una lleva su tabla de datos. Las cifras de mercado llevan su
+origen; las del sistema, su método.</p>
+
+</div>
+
+<script>
+/* ---- utilidades ---------------------------------------------------- */
+var NS = "http://www.w3.org/2000/svg";
+function el(nombre, attrs, texto){
+  var n = document.createElementNS(NS, nombre);
+  Object.keys(attrs || {}).forEach(function(k){ n.setAttribute(k, attrs[k]); });
+  if (texto !== undefined) n.textContent = texto;
+  return n;
+}
+var tip = document.getElementById("tip");
+function conTooltip(nodo, texto){
+  nodo.addEventListener("pointerenter", function(e){
+    tip.textContent = texto; tip.classList.add("on"); mover(e);
+  });
+  nodo.addEventListener("pointermove", mover);
+  nodo.addEventListener("pointerleave", function(){ tip.classList.remove("on"); });
+  function mover(e){
+    var x = Math.min(e.clientX + 14, window.innerWidth - 270);
+    tip.style.left = Math.max(8, x) + "px";
+    tip.style.top = Math.max(8, e.clientY - 46) + "px";
+  }
+}
+
+/* ---- 1. retención de clic por intención (barras, un hue) ----------- */
+(function(){
+  var g = document.getElementById("g-retencion");
+  var datos = [
+    {k:"Informacional", v:48, aio:90},
+    {k:"Sin señal clara", v:65, aio:60},
+    {k:"Comercial", v:74, aio:45},
+    {k:"Transaccional", v:88, aio:20}
+  ];
+  var x0 = 132, x1 = 592, y0 = 16, alto = 30, hueco = 18;
+
+  [0, 25, 50, 75, 100].forEach(function(t){
+    var x = x0 + (x1 - x0) * t / 100;
+    g.appendChild(el("line", {x1:x, y1:y0 - 4, x2:x,
+      y2:y0 + datos.length * (alto + hueco) - hueco + 4, class:"grid-line"}));
+    g.appendChild(el("text", {x:x, y:y0 + datos.length * (alto + hueco) + 10,
+      class:"tick", "text-anchor":"middle"}, t + "%"));
+  });
+
+  datos.forEach(function(d, i){
+    var y = y0 + i * (alto + hueco);
+    var ancho = (x1 - x0) * d.v / 100;
+    g.appendChild(el("text", {x:x0 - 12, y:y + alto / 2 + 4, class:"lab",
+      "text-anchor":"end"}, d.k));
+    /* opacidad por magnitud: un solo hue, más es más oscuro */
+    var barra = el("rect", {x:x0, y:y, width:ancho, height:alto, class:"bar",
+      fill:"var(--accent)", "fill-opacity": (0.45 + 0.55 * d.v / 100).toFixed(2)});
+    g.appendChild(barra);
+    g.appendChild(el("text", {x:x0 + ancho + 9, y:y + alto / 2 + 4, class:"val"},
+      d.v + "%"));
+    var hit = el("rect", {x:x0, y:y - 6, width:x1 - x0, height:alto + 12, class:"hit"});
+    g.appendChild(hit);
+    conTooltip(hit, d.k + "\nExposición a AI Overviews: " + d.aio +
+      "%\nClic que sobrevive: " + d.v + "%");
+  });
+})();
+
+/* ---- 2. inversión del orden (pendiente, énfasis) ------------------- */
+(function(){
+  var g = document.getElementById("g-pendiente");
+  var filas = [
+    {k:"instalador séptico cerca de mí", clics:5, valor:1, impr:900, c:21, v:46, tipo:"transaccional"},
+    {k:"mejor bomba de aire séptica",    clics:3, valor:2, impr:700, c:57, v:42, tipo:"comercial"},
+    {k:"cuánto cuesta un sistema",       clics:4, valor:3, impr:2200, c:57, v:42, tipo:"comercial"},
+    {k:"qué es un sistema aeróbico",     clics:1, valor:4, impr:10000, c:240, v:17, tipo:"informacional"},
+    {k:"cómo funciona la nitrificación", clics:2, valor:5, impr:4000, c:108, v:8, tipo:"informacional"}
+  ];
+  var xi = 196, xd = 444, y0 = 40, paso = 46;
+  var y = function(rango){ return y0 + (rango - 1) * paso; };
+
+  g.appendChild(el("text", {x:xi, y:18, class:"lab", "text-anchor":"middle"},
+    "Por clics estimados"));
+  g.appendChild(el("text", {x:xd, y:18, class:"lab", "text-anchor":"middle"},
+    "Por valor esperado"));
+  g.appendChild(el("line", {x1:xi, y1:26, x2:xi, y2:y(5) + 14, class:"axis"}));
+  g.appendChild(el("line", {x1:xd, y1:26, x2:xd, y2:y(5) + 14, class:"axis"}));
+
+  filas.forEach(function(d){
+    var sube = d.clics - d.valor >= 2;
+    var baja = d.valor - d.clics >= 2;
+    var color = sube ? "var(--accent)" : baja ? "var(--alert)" : "var(--mute)";
+    var grosor = (sube || baja) ? 2.5 : 1.5;
+    g.appendChild(el("line", {x1:xi + 7, y1:y(d.clics), x2:xd - 7, y2:y(d.valor),
+      stroke:color, "stroke-width":grosor, "stroke-linecap":"round",
+      "stroke-opacity": (sube || baja) ? 1 : 0.5}));
+    [[xi, d.clics], [xd, d.valor]].forEach(function(par){
+      g.appendChild(el("circle", {cx:par[0], cy:y(par[1]), r:5.5, fill:color,
+        stroke:"var(--panel)", "stroke-width":2}));
+    });
+    g.appendChild(el("text", {x:xi - 14, y:y(d.clics) + 4, class:"lab",
+      "text-anchor":"end"}, d.clics + ". " + d.k));
+    g.appendChild(el("text", {x:xd + 14, y:y(d.valor) + 4, class:"lab"},
+      d.valor + ". " + d.k));
+    var hit = el("rect", {x:xi, y:Math.min(y(d.clics), y(d.valor)) - 12,
+      width:xd - xi, height:Math.abs(y(d.clics) - y(d.valor)) + 24, class:"hit"});
+    g.appendChild(hit);
+    conTooltip(hit, d.k + "\n" + d.impr.toLocaleString("es-ES") +
+      " impresiones · " + d.tipo + "\nPuesto " + d.clics + " por clics (+" + d.c +
+      ")\nPuesto " + d.valor + " por valor (" + d.v + ")");
+  });
+})();
+
+/* ---- 3. calidad de contenido (barras, énfasis en la peor) ---------- */
+(function(){
+  var g = document.getElementById("g-calidad");
+  var datos = [
+    {k:"Líder de SEO automatizado", v:2.1, foco:true},
+    {k:"Writesonic", v:3.6},
+    {k:"Jasper", v:3.8},
+    {k:"Este sistema", v:null}
+  ];
+  var x0 = 182, x1 = 572, y0 = 14, alto = 26, hueco = 16;
+  [0, 1, 2, 3, 4, 5].forEach(function(t){
+    var x = x0 + (x1 - x0) * t / 5;
+    g.appendChild(el("line", {x1:x, y1:y0 - 4, x2:x,
+      y2:y0 + datos.length * (alto + hueco) - hueco + 4, class:"grid-line"}));
+    g.appendChild(el("text", {x:x, y:y0 + datos.length * (alto + hueco) + 10,
+      class:"tick", "text-anchor":"middle"}, String(t)));
+  });
+  datos.forEach(function(d, i){
+    var y = y0 + i * (alto + hueco);
+    g.appendChild(el("text", {x:x0 - 12, y:y + alto / 2 + 4, class:"lab",
+      "text-anchor":"end"}, d.k));
+    if (d.v === null){
+      g.appendChild(el("rect", {x:x0, y:y, width:x1 - x0, height:alto, class:"bar",
+        fill:"none", stroke:"var(--mute)", "stroke-width":1.5,
+        "stroke-dasharray":"5 4"}));
+      g.appendChild(el("text", {x:x0 + 12, y:y + alto / 2 + 4, class:"val",
+        fill:"var(--ink-3)"}, "sin medir"));
+      var h0 = el("rect", {x:x0, y:y - 6, width:x1 - x0, height:alto + 12, class:"hit"});
+      g.appendChild(h0);
+      conTooltip(h0, "Sin medir a propósito.\nSe mide a ciegas, con rúbrica\nescrita antes de generar.");
+      return;
+    }
+    var ancho = (x1 - x0) * d.v / 5;
+    g.appendChild(el("rect", {x:x0, y:y, width:ancho, height:alto, class:"bar",
+      fill: d.foco ? "var(--alert)" : "var(--mute)"}));
+    g.appendChild(el("text", {x:x0 + ancho + 9, y:y + alto / 2 + 4, class:"val"},
+      String(d.v).replace(".", ",")));
+    var hit = el("rect", {x:x0, y:y - 6, width:x1 - x0, height:alto + 12, class:"hit"});
+    g.appendChild(hit);
+    conTooltip(hit, d.k + "\nCalidad valorada: " + String(d.v).replace(".", ",") +
+      " sobre 5\nMedido por terceros");
+  });
+})();
+</script>
