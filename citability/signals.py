@@ -18,7 +18,47 @@ FIGURE = re.compile(
 # "unos 14.000 $" lo dice todo el mundo y el modelo lo saca de su propio peso.
 # "14.237 $" solo puede venir de alguien que lo conto. Es la senal mas barata y
 # mas discriminante de todo el modulo.
-ROUND_NUMBER = re.compile(r"\b\d{1,3}(?:[.,]000|0{3})\b|\b\d0\b|\b\d00\b")
+DIGITS = re.compile(r"[\d.,]+")
+
+
+def is_round(figure: str) -> bool:
+    """Decide si la cifra parece de consenso o medida.
+
+    Antes era una expresion regular sobre subcadenas, y eso daba falsos
+    positivos caros: en "15.498,50 $" encontraba el "50" de los decimales y
+    la trataba como redonda, cuando es justo lo contrario — una cifra con
+    decimales no redondos es la huella de una medicion.
+
+    Reglas: si hay parte decimal distinta de cero, no es redonda. Si no, lo es
+    cuando el entero acaba en dos ceros o mas (2.500, 14.000), o cuando tiene
+    tres digitos o menos y acaba en cero (30, 500, 900).
+    """
+    m = DIGITS.search(figure)
+    if not m:
+        return False
+    crudo = m.group(0).strip(".,")
+    if not crudo:
+        return False
+
+    entero, decimal = crudo, ""
+    # Un separador seguido de una o dos cifras al final es decimal; tres es
+    # grupo de millar.
+    ultimo = max(crudo.rfind("."), crudo.rfind(","))
+    if ultimo != -1 and 1 <= len(crudo) - ultimo - 1 <= 2:
+        entero, decimal = crudo[:ultimo], crudo[ultimo + 1:]
+
+    if decimal and decimal.strip("0"):
+        return False  # tiene decimales de verdad: es una medicion
+
+    digitos = re.sub(r"\D", "", entero).lstrip("0")
+    if not digitos:
+        return False
+    # Ceros a la derecha segun la magnitud: dos o mas siempre es redonda
+    # (2.500, 14.000); con tres digitos o menos basta uno (30, 500).
+    ceros = len(digitos) - len(digitos.rstrip("0"))
+    if ceros >= 2:
+        return True
+    return len(digitos) <= 3 and ceros >= 1
 # "entre" solo aproxima cuando va delante de una cifra: "entre 300 y 900 $" es
 # una horquilla, pero "recogidos entre enero y junio" es un rango exacto de
 # fechas. Sin esta distincion se penalizaba la frase mejor atribuida del texto.
@@ -129,7 +169,7 @@ def is_precise(text: str) -> bool:
     """
     for match in FIGURE.finditer(text):
         figure = match.group(0)
-        if ROUND_NUMBER.search(figure):
+        if is_round(figure):
             continue
         before = text[max(0, match.start() - APPROXIMATOR_REACH) : match.start()]
         if APPROXIMATOR.search(before):

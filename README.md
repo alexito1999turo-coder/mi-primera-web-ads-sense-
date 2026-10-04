@@ -35,10 +35,25 @@ abuse*: la restricción de riesgo y la ventaja de producto son la misma decisió
 | **M9** | `compliance/` | Dossier mensual mapeado contra la política, huella de similitud de cartera |
 | **M3** | `insight/` | Oportunidad descontada por AI Overviews y reasignación de clusters |
 | **M7a** | `citability/` | Qué frases puede citar un buscador, y qué le falta a las demás |
-
-Pendiente: M6 autoridad sin esquema de enlaces (es más negocio que código).
+| **M6a** | `dataset/` | Datos propios con procedencia: el activo enlazable que sustituye a la red de enlaces |
 
 ## Las tres cosas que la competencia no hace
+
+**Datos propios con procedencia** (`dataset/`). Existe porque había un agujero
+en mi propio diseño: el generador **bloquea** cualquier página sin dato propio
+con método, y nada en el sistema producía uno. Un requisito obligatorio sin forma
+de cumplirlo no es rigor, es un callejón sin salida.
+
+Lo resuelve una idea simple: **la agregación crea originalidad.** Cuarenta
+presupuestos pueden ser públicos uno a uno; su mediana por condado no existe en
+ningún otro sitio. De ahí salen tres cosas a la vez: el dato que exige la
+compuerta, el activo enlazable que sustituye a la red recíproca, y la cifra
+precisa que el motor de citabilidad premia.
+
+Y el módulo **escribe la frase**, construida para cumplir las cuatro condiciones
+de citabilidad. Hay una prueba que lo verifica cruzando los dos módulos: lo que
+produce el de datos tiene que ser citable según el de citabilidad, sin retocarlo
+a mano. Sale 87 sobre 100.
 
 **Ingeniería de citabilidad** (`citability/`). Ellos *rastrean* citaciones en
 ChatGPT, Perplexity, Gemini y Claude. Eso es un termómetro: dice lo que ya pasó.
