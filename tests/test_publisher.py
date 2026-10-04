@@ -166,10 +166,29 @@ class TestWordPress(unittest.TestCase):
         self.assertIn("no valido", outcome.refused_reason)
 
     def test_actualiza_en_vez_de_duplicar(self):
-        self.existing = {"id": 42}
+        # Un post real de la API REST siempre trae su slug; el doble tambien.
+        self.existing = {"id": 42, "slug": "coste"}
         outcome = self.wp.publish(self.draft, GateResult(), CTX)
         self.assertFalse(outcome.created)
         self.assertIn("posts/42", self.calls[-1][1])
+
+    def test_un_post_con_otro_slug_no_se_sobreescribe(self):
+        """Si la API ignorase el filtro, no se pisa lo que no es nuestro.
+
+        Crear un duplicado se ve y se borra; machacar la pagina de otro, no.
+        """
+        self.existing = {"id": 42, "slug": "otra-cosa"}
+        outcome = self.wp.publish(self.draft, GateResult(), CTX)
+        self.assertTrue(outcome.created)
+        self.assertNotIn("posts/42", self.calls[-1][1])
+
+    def test_el_slug_va_codificado_en_la_busqueda(self):
+        """Interpolar a mano en una URL es inyeccion aunque venga de casa."""
+        self.wp.find_by_slug("a&b c")
+        url = self.calls[-1][1]
+        self.assertIn("slug=a%26b+c", url)
+        self.assertIn("status=any", url)
+        self.assertEqual(url.count("status="), 1)
 
     def test_el_cuerpo_lleva_el_json_ld(self):
         self.wp.publish(self.draft, GateResult(), CTX)

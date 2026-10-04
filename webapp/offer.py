@@ -155,8 +155,9 @@ PROOF = (
     Claim(
         "Ninguna prueba de la batería toca la red",
         STATE_MEASURED,
-        "dobles de transporte; el único socket es un WordPress simulado dentro "
-        "del propio proceso de pruebas",
+        "dobles de transporte; los únicos sockets son de loopback y viven dentro "
+        "del propio proceso de pruebas: un WordPress simulado y el servidor de "
+        "la propia aplicación. Nada sale de la máquina",
     ),
     Claim(
         "Posiciones y citaciones conseguidas en el sitio de un cliente",

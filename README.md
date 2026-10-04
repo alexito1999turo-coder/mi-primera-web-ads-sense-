@@ -7,7 +7,7 @@ advertencia al final.
 Referente a batir: BabyLoveGrowth.ai. Se le copia la ingeniería y el modelo
 comercial; se rechazan sus tres pasivos.
 
-**Python 3.11+, cero dependencias.** Solo librería estándar. 476 pruebas,
+**Python 3.11+, cero dependencias.** Solo librería estándar. 479 pruebas,
 ninguna toca la red.
 
 ## La tesis

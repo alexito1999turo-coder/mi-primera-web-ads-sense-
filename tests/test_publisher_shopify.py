@@ -172,6 +172,19 @@ class TestShopify(unittest.TestCase):
         self.assertEqual(method, "PUT")
         self.assertTrue(url.endswith(f"/blogs/{BLOG}/articles/42.json"))
 
+    def test_un_articulo_con_otro_handle_no_se_sobreescribe(self):
+        """Mismo criterio que el publicador de WordPress, y por lo mismo.
+
+        Si la API ignorase el filtro de handle, el PUT caeria sobre el articulo
+        de otro. Un duplicado se ve y se borra; lo machacado, no.
+        """
+        self.existing = {"id": 42, "handle": "otra-cosa"}
+        outcome = self.shop.publish(self.draft, GateResult(), CTX)
+        self.assertTrue(outcome.created)
+        method, url, _, _ = self.calls[-1]
+        self.assertEqual(method, "POST")
+        self.assertNotIn("/articles/42.json", url)
+
     def test_el_cuerpo_lleva_el_json_ld(self):
         self.shop.publish(self.draft, GateResult(), CTX)
         contenido = self.calls[-1][2]["article"]["body_html"]

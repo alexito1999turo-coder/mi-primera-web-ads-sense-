@@ -16,6 +16,7 @@ from __future__ import annotations
 import base64
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Callable, Protocol
@@ -33,6 +34,15 @@ Transport = Callable[[str, str, dict, bytes | None], tuple[int, dict]]
 
 class Credentials(Protocol):
     def header(self) -> str: ...
+
+
+def _same_slug(returned: object, asked: str) -> bool:
+    """Lo devuelto por el CMS es lo que se pidio.
+
+    Sin tildes ni normalizaciones raras: se compara en minusculas porque los dos
+    CMS guardan el slug en minusculas y el llamante puede pasarlo como sea.
+    """
+    return isinstance(returned, str) and returned.lower() == asked.lower()
 
 
 @dataclass
@@ -109,11 +119,25 @@ class WordPress:
         return self.transport(method, url, headers, body)
 
     def find_by_slug(self, slug: str) -> dict | None:
-        """Buscar antes de crear: evita duplicar la pagina en cada ejecucion."""
-        status, data = self._call("GET", f"posts?slug={slug}&status=any")
-        if 200 <= status < 300 and isinstance(data, list) and data:
-            return data[0]
-        return None
+        """Buscar antes de crear: evita duplicar la pagina en cada ejecucion.
+
+        La query va codificada: un slug con `&` partia la URL y colaba un
+        parametro mas, y uno con espacios la rompia. Interpolar a mano en una
+        URL es inyeccion, aunque el valor venga de casa.
+
+        Y se confirma que lo devuelto es lo pedido. Si la API ignorase el filtro
+        y contestara con otro post, `publish` tomaria la rama de actualizacion y
+        sobreescribiria una pagina ajena. Preferible crear un duplicado, que se
+        ve y se borra, a pisar algo que no es nuestro.
+        """
+        query = urllib.parse.urlencode({"slug": slug, "status": "any"})
+        status, data = self._call("GET", f"posts?{query}")
+        if not 200 <= status < 300 or not isinstance(data, list) or not data:
+            return None
+        first = data[0]
+        if not isinstance(first, dict):
+            return None
+        return first if _same_slug(first.get("slug"), slug) else None
 
     # -- publicacion ------------------------------------------------------
     def publish(

@@ -39,6 +39,7 @@ from .wordpress import (
     Credentials,
     PublishOutcome,
     Transport,
+    _same_slug,
     urllib_transport,
 )
 
@@ -166,10 +167,15 @@ class Shopify:
         if not 200 <= status < 300 or not isinstance(data, dict):
             return None
         articles = data.get("articles")
-        if isinstance(articles, list) and articles:
-            first = articles[0]
-            return first if isinstance(first, dict) else None
-        return None
+        if not isinstance(articles, list) or not articles:
+            return None
+        first = articles[0]
+        if not isinstance(first, dict):
+            return None
+        # Lo devuelto tiene que ser lo pedido: si la API ignorase el filtro,
+        # `publish` haria PUT sobre el articulo de otro. Mismo criterio que el
+        # publicador de WordPress, de ahi que el predicado sea el suyo.
+        return first if _same_slug(first.get("handle"), slug) else None
 
     # -- publicacion ------------------------------------------------------
     def publish(
