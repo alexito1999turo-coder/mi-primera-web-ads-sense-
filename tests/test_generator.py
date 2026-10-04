@@ -134,6 +134,51 @@ class TestCompuertas(unittest.TestCase):
         result = check(draft, brief_completo(), corpus=corpus)
         self.assertIn("solape_con_publicado", [f.code for f in result.blocking])
 
+    def test_bloquea_solape_contra_las_firmas_del_almacen(self):
+        from store.sketch import Sketch
+
+        draft = Draft(slug="nueva", title="t", body=cuerpo_bueno())
+        firmas = {"ya-publicada": Sketch.of(cuerpo_bueno())}
+        result = check(draft, brief_completo(), published=firmas)
+        self.assertIn("solape_con_publicado", [f.code for f in result.blocking])
+
+    def test_el_corpus_en_memoria_no_apaga_la_comprobacion_contra_el_almacen(self):
+        """Regresion: con `elif`, la pagina 2 de un lote dejaba de compararse.
+
+        En un lote con almacen, el corpus en memoria se llena con la primera
+        pagina publicada. Si el solape se comprueba con `corpus` O con
+        `published` en vez de con los dos, el resto del lote solo se compara
+        contra el propio lote y el sitio entero queda sin comprobar.
+        """
+        from store.sketch import Sketch
+
+        draft = Draft(slug="nueva", title="t", body=cuerpo_bueno())
+        result = check(
+            draft, brief_completo(),
+            corpus={"otra-del-lote": {"nada", "que", "ver", "en", "absoluto"}},
+            published={"ya-publicada": Sketch.of(cuerpo_bueno())},
+        )
+        codigos = [f.code for f in result.blocking]
+        self.assertIn("solape_con_publicado", codigos)
+        self.assertEqual(
+            ["ya-publicada"],
+            [e for f in result.blocking if f.code == "solape_con_publicado"
+             for e in f.samples],
+        )
+
+    def test_no_repite_el_hallazgo_cuando_el_slug_esta_en_las_dos_fuentes(self):
+        from store.sketch import Sketch
+
+        draft = Draft(slug="nueva", title="t", body=cuerpo_bueno())
+        result = check(
+            draft, brief_completo(),
+            corpus={"ya-publicada": draft.shingles()},
+            published={"ya-publicada": Sketch.of(cuerpo_bueno())},
+        )
+        self.assertEqual(
+            1, len([f for f in result.blocking if f.code == "solape_con_publicado"])
+        )
+
     def test_sin_corpus_lo_declara_en_vez_de_afirmarlo(self):
         result = check(Draft(slug="x", title="t", body=cuerpo_bueno()), brief_completo())
         self.assertIn("solape_no_comprobado", [f.code for f in result.findings])

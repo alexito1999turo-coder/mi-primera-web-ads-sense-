@@ -162,6 +162,7 @@ def produce(
     brief: Brief,
     llm: LLM,
     corpus: dict[str, set[str]] | None = None,
+    published: dict | None = None,
     max_repairs: int = 2,
     effort: str = DEFAULT_EFFORT,
     max_tokens: int = DEFAULT_MAX_TOKENS,
@@ -170,6 +171,9 @@ def produce(
 
     Un brief incompleto no llega al modelo: generar con un brief sin dato propio
     es pagar por una reescritura del top 10.
+
+    `published` son las firmas del almacen, para que el solape se compruebe
+    contra lo que ya esta publicado en el sitio y no solo contra el lote.
     """
     production = Production(brief=brief)
 
@@ -193,7 +197,7 @@ def produce(
             body=body,
             declared_sources=[s.url for s in brief.required_sources],
         )
-        result = check(draft, brief, corpus=corpus)
+        result = check(draft, brief, corpus=corpus, published=published)
         production.attempts.append(
             Attempt(number=attempt_number, draft=draft, result=result)
         )
@@ -235,19 +239,28 @@ def produce_many(
     briefs: list[Brief],
     llm: LLM,
     corpus: dict[str, set[str]] | None = None,
+    store=None,
     max_repairs: int = 2,
 ) -> tuple[list[Production], BatchStats]:
     """Produce un lote y acumula el corpus en marcha.
 
     Cada pagina que pasa entra en el corpus, asi la siguiente se compara tambien
     contra ella: el lote no puede canibalizarse a si mismo.
+
+    Con `store` (un `ProjectStore`) el lote se compara ademas contra todo lo ya
+    publicado del sitio, y cada pagina que pasa queda guardada. Es la
+    diferencia entre un lote que no se repite a si mismo y un sitio que no se
+    repite nunca: sin almacen, la pagina numero 201 podia ser la numero 12
+    reescrita y ninguna compuerta lo veia.
     """
     running = dict(corpus or {})
+    firmas = dict(store.corpus()) if store is not None else None
     productions: list[Production] = []
     stats = BatchStats(total=len(briefs))
 
     for brief in briefs:
-        production = produce(brief, llm, corpus=running, max_repairs=max_repairs)
+        production = produce(brief, llm, corpus=running,
+                             published=firmas, max_repairs=max_repairs)
         productions.append(production)
         if production.aborted_reason:
             stats.aborted += 1
@@ -256,6 +269,13 @@ def produce_many(
         if production.passed:
             stats.passed += 1
             running[production.draft.slug] = production.draft.shingles()
+            if store is not None:
+                pagina = store.record_page(
+                    production.draft.slug, production.draft.body,
+                    words=production.draft.word_count,
+                    role=brief.page.role,
+                )
+                firmas[pagina.slug] = pagina.sketch
         if production.publishable_as_is:
             stats.publishable_as_is += 1
 

@@ -11,6 +11,7 @@ import re
 from dataclasses import dataclass, field
 
 from citability.score import analyse as analyse_citability
+from store.sketch import Sketch, similarity
 
 from .brief import Brief
 
@@ -189,13 +190,21 @@ def check(
     draft: Draft,
     brief: Brief,
     corpus: dict[str, set[str]] | None = None,
+    published: "dict[str, Sketch] | None" = None,
     max_density: float = MAX_DENSITY,
     max_overlap: float = MAX_OVERLAP,
 ) -> GateResult:
     """Pasa el borrador por todas las compuertas.
 
-    `corpus` son los shingles de las paginas ya publicadas, por slug. Sin el,
-    el solape interno no se comprueba y el informe lo dice.
+    Hay dos formas de darle lo ya publicado, y la diferencia importa:
+
+      - `corpus`: los shingles enteros por slug. Exacto, y solo viable dentro
+        de un lote que ya esta en memoria.
+      - `published`: las firmas MinHash del almacen. Estimado con ~6% de error
+        y de tamano fijo, asi que funciona con mil paginas en disco.
+
+    Sin ninguno de los dos el solape no se comprueba y el informe lo dice, en
+    vez de dejar pasar la pagina como si estuviera comprobada.
     """
     result = GateResult()
 
@@ -278,7 +287,16 @@ def check(
             )
 
     # 6. Solape con lo ya publicado.
+    #
+    # Las dos fuentes se comprueban, no una o la otra. En un lote con almacen
+    # el corpus en memoria se llena con la primera pagina, y con un `elif` el
+    # resto del lote dejaba de compararse contra el sitio publicado: la pagina
+    # 2 del lote podia ser la 12 del sitio y nadie lo veia. Lo marcaba un
+    # `elif` que escribi hace diez minutos y que los 347 tests no cazaron,
+    # porque ninguno pasaba las dos fuentes a la vez.
+    comprobado = False
     if corpus:
+        comprobado = True
         mine = draft.shingles()
         for slug, other in corpus.items():
             if slug == draft.slug or not other or not mine:
@@ -292,7 +310,27 @@ def check(
                     "Es canibalizacion fabricada por el generador.",
                     [slug],
                 )
-    else:
+    if published:
+        comprobado = True
+        mia = Sketch.of(draft.body)
+        exactos = set(corpus or {})
+        for slug, firma in published.items():
+            # Si el slug ya se comparo con los shingles enteros, no se repite
+            # el hallazgo con la version estimada.
+            if slug == draft.slug or slug in exactos or not firma.hashes:
+                continue
+            overlap = similarity(mia, firma)
+            if overlap > max_overlap:
+                exacto = mia.exact and firma.exact
+                result.add(
+                    "solape_con_publicado",
+                    SEVERITY_BLOCK,
+                    f"Comparte el {overlap * 100:.0f}% de sus frases con '{slug}' "
+                    f"({'medido sobre la firma completa' if exacto else 'estimado desde la firma, ~6% de error'}). "
+                    "Es canibalizacion fabricada por el generador.",
+                    [slug],
+                )
+    if not comprobado:
         result.add(
             "solape_no_comprobado",
             SEVERITY_NOTE,
