@@ -289,3 +289,158 @@ def tarifa(planes: list[Plan], fijos_mes: float = 0.0, **kw) -> Tarifa:
             salida.puntos_muertos[plan.nombre] = punto_muerto(
                 plan, fijos_mes, **kw)
     return salida
+
+
+def precio_minimo(plan: Plan, margen_objetivo: float = MARGEN_MINIMO,
+                  robusto: bool = True, **kw) -> dict:
+    """Que habria que cobrar por este plan para que aguante.
+
+    `robusto` es la diferencia entre un precio que funciona y uno que
+    funciona mientras no pase nada: exige el margen objetivo DESPUES de la
+    peor de las tres palancas, no antes. Un plan que solo cumple en el caso
+    bueno es un plan que incumple en cuanto el primer cliente pide una
+    llamada de mas.
+    """
+    coste = plan.coste(**kw).total * plan.paginas
+    if margen_objetivo >= 1:
+        raise ValueError("El margen objetivo tiene que ser menor que 1.")
+    base = coste / (1 - margen_objetivo)
+
+    if not robusto:
+        precio = base
+        motivo = f"margen {margen_objetivo * 100:.0f}% en el caso bueno"
+    else:
+        # La palanca que mas duele es la revision: se calcula el precio que
+        # da el margen objetivo con los minutos un 50% por encima.
+        minutos = kw.get("minutos_revision", plan.minutos_revision)
+        peor = dict(kw, minutos_revision=minutos * 1.5)
+        coste_peor = plan.coste(**peor).total * plan.paginas
+        precio = max(base, coste_peor / (1 - margen_objetivo))
+        motivo = (f"margen {margen_objetivo * 100:.0f}% aun con la revision "
+                  f"en {minutos * 1.5:.0f} minutos por pagina")
+
+    precio = round(precio / 10) * 10 or 10   # a decenas, como un precio real
+    resultado = evaluar(Plan(plan.nombre, precio, plan.paginas,
+                             plan.minutos_revision), **kw)
+    return {
+        "precio": precio,
+        "actual": plan.precio_mes,
+        "subida": round(precio - plan.precio_mes, 2),
+        "margen_resultante": resultado.margen_pct,
+        "motivo": motivo,
+        "lectura": (
+            f"«{plan.nombre}» a {plan.precio_mes:.0f} $ deja "
+            f"{evaluar(plan, **kw).margen_pct:.0f}% de margen. Para {motivo} "
+            f"habria que cobrar {precio:.0f} $ "
+            f"({plural(plan.paginas, 'pagina')}, "
+            f"{precio / plan.paginas:.2f} $ por pagina)."
+        ),
+    }
+
+
+def paginas_maximas(plan: Plan, margen_objetivo: float = MARGEN_MINIMO,
+                    **kw) -> dict:
+    """Cuantas paginas caben en este precio sin bajar del margen objetivo.
+
+    Es la otra salida, y casi siempre la mejor: en vez de subir el precio,
+    prometer menos. Un plan de ocho paginas bien hechas se vende mejor que
+    uno de doce con prisa, y el cliente no compra paginas — compra que el
+    trafico suba.
+    """
+    coste_unidad = plan.coste(**kw).total
+    if coste_unidad <= 0:
+        return {"paginas": plan.paginas, "lectura": "Sin coste por pagina que acotar."}
+
+    # No es una division: es un punto fijo.
+    #
+    # El coste por pagina DEPENDE de cuantas paginas tiene el plan, porque el
+    # coste fijo de herramientas se reparte entre ellas. Al bajar de doce
+    # paginas a nueve, cada una carga mas herramientas, y el nueve que salia
+    # de dividir ya no cumple el margen. Lo encontro su propio test: pedia
+    # 35% y daba 31%.
+    #
+    # Se baja de una en una comprobando de verdad, que para numeros de dos
+    # cifras es mas barato que resolverlo bien y no se puede equivocar.
+    cabe = 0
+    for candidato in range(plan.paginas, 0, -1):
+        tentativa = Plan(plan.nombre, plan.precio_mes, candidato,
+                         plan.minutos_revision)
+        if evaluar(tentativa, **kw).margen_pct >= margen_objetivo * 100:
+            cabe = candidato
+            break
+
+    if cabe == 0:
+        return {
+            "paginas": 0, "actuales": plan.paginas, "sobran": plan.paginas,
+            "lectura": (
+                f"A {plan.precio_mes:.0f} $ no cabe ni una pagina con "
+                f"{margen_objetivo * 100:.0f}% de margen: el precio no cubre "
+                "el coste fijo del plan, asi que quitar alcance no lo arregla."
+            ),
+        }
+
+    coste_real = Plan(plan.nombre, plan.precio_mes, cabe,
+                      plan.minutos_revision).coste(**kw).total
+    return {
+        "paginas": cabe,
+        "actuales": plan.paginas,
+        "sobran": plan.paginas - cabe,
+        "lectura": (
+            f"A {plan.precio_mes:.0f} $ caben {plural(cabe, 'pagina')} con "
+            f"{margen_objetivo * 100:.0f}% de margen ({coste_real:.2f} $ por "
+            f"pagina a ese volumen); el plan promete "
+            f"{plural(plan.paginas, 'pagina')}."
+        ),
+    }
+
+
+def curva_de_cartera(plan: Plan, volumenes: list[int] | None = None,
+                     margen_objetivo: float = MARGEN_MINIMO, **kw) -> dict:
+    """Margen del plan segun el tamano de la cartera.
+
+    Es la vista que faltaba, y la descubri arreglando un error propio: el
+    coste de herramientas es fijo del negocio, no del cliente, asi que el
+    primer cliente lo carga entero y el decimo lo carga dividido entre diez.
+    Mirando un solo plan aislado, uno pequeno parece inviable; lo que es
+    inviable es tenerlo como unico cliente.
+
+    Lo util de esto en una conversacion de precio: no hay que subir la tarifa
+    por lo que se ve en el cliente uno. Hay que saber en que numero de
+    clientes cambia, y si ese numero se puede alcanzar.
+    """
+    volumenes = volumenes or [1, 2, 3, 5, 8, 12, 20, 40]
+    puntos = []
+    umbral = None
+    for clientes in volumenes:
+        cartera = clientes * plan.paginas
+        resultado = evaluar(plan, **dict(kw, paginas_cartera=cartera))
+        puntos.append({
+            "clientes": clientes,
+            "paginas_cartera": cartera,
+            "coste_pagina": resultado.coste_pagina,
+            "margen_pct": resultado.margen_pct,
+            "sano": resultado.margen_pct >= margen_objetivo * 100,
+        })
+        if umbral is None and puntos[-1]["sano"]:
+            umbral = clientes
+
+    if umbral is None:
+        lectura = (
+            f"«{plan.nombre}» no llega al {margen_objetivo * 100:.0f}% de "
+            "margen ni con la cartera mas grande que se ha probado. El "
+            "problema no es la escala: es el precio o el alcance."
+        )
+    elif umbral == 1:
+        lectura = (
+            f"«{plan.nombre}» ya es rentable con el primer cliente "
+            f"({puntos[0]['margen_pct']:.0f}% de margen)."
+        )
+    else:
+        lectura = (
+            f"«{plan.nombre}» no aguanta con pocos clientes: con uno deja "
+            f"{puntos[0]['margen_pct']:.0f}% y hace falta llegar a "
+            f"{plural(umbral, 'cliente')} para pasar del "
+            f"{margen_objetivo * 100:.0f}%. Hasta ahi, cada cliente de este "
+            "plan carga entero el coste de herramientas."
+        )
+    return {"puntos": puntos, "umbral_clientes": umbral, "lectura": lectura}

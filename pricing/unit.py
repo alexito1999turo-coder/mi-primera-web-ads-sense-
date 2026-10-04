@@ -111,6 +111,7 @@ def por_pagina(
     coste_hora: float = 45.0,
     herramientas_mes: float = 0.0,
     paginas_mes: int = 1,
+    paginas_cartera: int = 0,
     reparaciones: float = 0.0,
     minutos_medidos: bool = False,
 ) -> CostePagina:
@@ -147,9 +148,25 @@ def por_pagina(
         "coste por hora", coste_hora, SUPUESTO,
         "depende de quien revise; declararlo es decision del negocio"))
 
-    if paginas_mes > 0 and herramientas_mes:
-        coste.herramientas = round(herramientas_mes / paginas_mes, 4)
+    # El reparto de las herramientas: el error que tenia esto y que cambiaba
+    # la conclusion.
+    #
+    # Dividir el coste de herramientas entre las paginas DE UN PLAN supone que
+    # cada cliente paga su propia caja de herramientas entera. En una agencia
+    # eso es falso: se paga una vez y sirve para todos. Con el reparto malo, un
+    # plan de 8 paginas cargaba 15 $ por pagina y uno de 60 cargaba 2 $ por las
+    # MISMAS herramientas, y el plan pequeno salia inviable por un artefacto
+    # del calculo, no por su economia.
+    #
+    # `paginas_cartera` es el volumen mensual de toda la cartera. Sin el se
+    # reparte sobre el plan, que es el caso de un solo cliente, y la entrada lo
+    # declara para que nadie lea ese numero como si fuera el de una agencia.
+    denominador = paginas_cartera if paginas_cartera > 0 else paginas_mes
+    if denominador > 0 and herramientas_mes:
+        coste.herramientas = round(herramientas_mes / denominador, 4)
         coste.entradas.append(Entrada(
             "herramientas al mes", herramientas_mes, SUPUESTO,
-            f"repartido entre {paginas_mes} pagina(s)"))
+            f"repartido entre {denominador} pagina(s) "
+            + ("de toda la cartera" if paginas_cartera > 0 else
+               "de este plan: supone un solo cliente")))
     return coste

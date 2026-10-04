@@ -7,7 +7,10 @@ from pricing.plans import (
     MARGEN_MINIMO,
     NO_CONTADO,
     Plan,
+    curva_de_cartera,
     evaluar,
+    paginas_maximas,
+    precio_minimo,
     punto_muerto,
     sensibilidad,
     tarifa,
@@ -176,3 +179,84 @@ class TestPlanes(unittest.TestCase):
         resultado = tarifa(self.planes(), **BASE)
         self.assertLess(resultado.medido, 100)
         self.assertIn("mediciones", resultado.to_markdown())
+
+
+class TestRepartoDeHerramientas(unittest.TestCase):
+    """Regresion del error que cambiaba la conclusion del modulo.
+
+    Dividir las herramientas entre las paginas DE UN PLAN supone que cada
+    cliente paga su propia caja entera. Con ese reparto, un plan pequeno
+    salia inviable por un artefacto del calculo y no por su economia: yo
+    mismo llegue a decir que el plan Core de la web era una trampa, y era
+    mio el error.
+    """
+
+    def test_el_mismo_coste_de_herramientas_no_puede_salir_distinto_por_plan(self):
+        pequeno = por_pagina(**dict(BASE, paginas_mes=8, paginas_cartera=300))
+        grande = por_pagina(**dict(BASE, paginas_mes=60, paginas_cartera=300))
+        self.assertEqual(pequeno.herramientas, grande.herramientas)
+
+    def test_sin_cartera_declarada_supone_un_solo_cliente_y_lo_dice(self):
+        coste = por_pagina(**dict(BASE, paginas_mes=8))
+        entrada = [e for e in coste.entradas if "herramientas" in e.nombre][0]
+        self.assertIn("un solo cliente", entrada.nota)
+
+    def test_con_cartera_declarada_lo_dice_tambien(self):
+        coste = por_pagina(**dict(BASE, paginas_mes=8, paginas_cartera=300))
+        entrada = [e for e in coste.entradas if "herramientas" in e.nombre][0]
+        self.assertIn("toda la cartera", entrada.nota)
+        self.assertLess(coste.herramientas,
+                        por_pagina(**dict(BASE, paginas_mes=8)).herramientas)
+
+
+class TestSolver(unittest.TestCase):
+    def test_el_precio_robusto_es_mayor_que_el_del_caso_bueno(self):
+        plan = Plan("Core", 299, 12)
+        flojo = precio_minimo(plan, robusto=False, **BASE)["precio"]
+        duro = precio_minimo(plan, robusto=True, **BASE)["precio"]
+        self.assertGreaterEqual(duro, flojo)
+
+    def test_el_precio_propuesto_alcanza_el_margen(self):
+        plan = Plan("Core", 299, 12)
+        dato = precio_minimo(plan, robusto=False, **BASE)
+        self.assertGreaterEqual(dato["margen_resultante"],
+                                MARGEN_MINIMO * 100 - 2)
+
+    def test_un_margen_objetivo_imposible_se_rechaza(self):
+        with self.assertRaises(ValueError):
+            precio_minimo(Plan("x", 100, 1), margen_objetivo=1.0, **BASE)
+
+    def test_las_paginas_maximas_dejan_el_margen_pedido(self):
+        plan = Plan("Core", 299, 12)
+        dato = paginas_maximas(plan, **BASE)
+        ajustado = Plan("Core", 299, max(dato["paginas"], 1))
+        self.assertGreaterEqual(evaluar(ajustado, **BASE).margen_pct,
+                                MARGEN_MINIMO * 100 - 1)
+
+    def test_subir_el_precio_y_bajar_paginas_son_las_dos_salidas(self):
+        plan = Plan("Core", 299, 12)
+        self.assertGreater(precio_minimo(plan, **BASE)["precio"], 299)
+        self.assertLess(paginas_maximas(plan, **BASE)["paginas"], 12)
+
+
+class TestCurvaDeCartera(unittest.TestCase):
+    def test_el_margen_sube_con_el_tamano_de_la_cartera(self):
+        curva = curva_de_cartera(Plan("Core", 299, 12), **BASE)
+        margenes = [p["margen_pct"] for p in curva["puntos"]]
+        self.assertEqual(margenes, sorted(margenes),
+                         "mas clientes reparten el coste fijo, nunca al reves")
+
+    def test_dice_a_partir_de_cuantos_clientes_aguanta(self):
+        curva = curva_de_cartera(Plan("Core", 299, 12), **BASE)
+        self.assertEqual(curva["umbral_clientes"], 2)
+        self.assertIn("no aguanta con pocos clientes", curva["lectura"])
+
+    def test_un_plan_rentable_desde_el_primer_cliente_lo_dice(self):
+        curva = curva_de_cartera(Plan("Scale", 699, 24), **BASE)
+        self.assertEqual(curva["umbral_clientes"], 1)
+        self.assertIn("primer cliente", curva["lectura"])
+
+    def test_un_plan_que_no_escala_no_culpa_a_la_escala(self):
+        curva = curva_de_cartera(Plan("Regalado", 60, 24), **BASE)
+        self.assertIsNone(curva["umbral_clientes"])
+        self.assertIn("no es la escala", curva["lectura"])
