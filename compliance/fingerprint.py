@@ -10,6 +10,8 @@ con el mismo esqueleto de parrafos son una granja de contenido en agregado.
 
 from __future__ import annotations
 
+from textos import plural
+
 import re
 from dataclasses import dataclass, field
 
@@ -113,7 +115,8 @@ class PortfolioAudit:
             )
         if self.passed:
             return (
-                f"{self.sites} sitios, {len(self.collisions)} pares comparados, "
+                f"{plural(self.sites, 'sitio')}, "
+                f"{plural(len(self.collisions), 'par', 'pares')} comparados, "
                 "ninguna colision. Cada sitio es independiente en agregado."
             )
         return (

@@ -7,6 +7,8 @@ compuerta sin que intervenga el criterio de nadie.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 
 from generator.brief import Brief
@@ -137,7 +139,7 @@ class Experiment:
 
     def describe(self) -> str:
         return (
-            f"{self.specimens} articulos ({len(self.clean)} sin defectos, "
+            f"{plural(self.specimens, 'articulo')} ({len(self.clean)} sin defectos, "
             f"{len(self.dirty)} con defectos anotados) · "
             f"{self.injected_total} defectos inyectados, "
             f"{self.caught_total} cazados ({self.detection_rate}%) · "

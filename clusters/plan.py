@@ -7,6 +7,8 @@ satelites enlazan al pilar y un enlace a una pagina que no existe no vale nada.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 
 from .graph import Graph, PageSpec
@@ -106,7 +108,7 @@ def to_markdown(graph: Graph, plan: Plan, validation=None) -> str:
 
     for month in sorted(plan.months):
         pages = plan.month(month)
-        add(f"## Mes {month} — {len(pages)} paginas")
+        add(f"## Mes {month} — {plural(len(pages), 'pagina')}")
         add("")
         add("| # | Pagina | Rol | Cluster | Intencion | Min. palabras | Prioridad |")
         add("|---|---|---|---|---|---|---|")

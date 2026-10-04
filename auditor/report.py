@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from textos import plural
+
 import json
 from dataclasses import asdict
 
@@ -41,7 +43,7 @@ def to_markdown(audit: Audit) -> str:
     if audit.impressions_loaded:
         confirmed = [c for c in audit.cannibalization if c.confirmed]
         add(f"- Canibalizacion confirmada: **{len(confirmed)}** de "
-            f"{len(audit.cannibalization)} pares comparados")
+            f"{plural(len(audit.cannibalization), 'par', 'pares')} comparados")
     add("")
 
     # --- Archivos --------------------------------------------------------
@@ -110,7 +112,8 @@ def to_markdown(audit: Audit) -> str:
             add(f"| {label} | {pct}% |")
         add("")
         if audit.intent_at_risk_urls:
-            add(f"{len(audit.intent_at_risk_urls)} articulos son informacionales "
+            add(f"{plural(len(audit.intent_at_risk_urls), 'articulo')} "
+                "son informacionales "
                 "puros: rankean pero el clic lo absorbe la respuesta generada. "
                 "La mezcla necesita intencion comercial y transaccional.")
             add("")

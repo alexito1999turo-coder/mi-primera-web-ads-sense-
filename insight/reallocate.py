@@ -8,6 +8,8 @@ la respuesta es "todavia no se sabe", que es una respuesta.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
@@ -246,7 +248,7 @@ class Reallocation:
             if allocation:
                 parts.append(
                     "Reparto de las "
-                    + f"{pages} paginas: "
+                    + f"{plural(pages, 'pagina')}: "
                     + ", ".join(f"{k} {v}" for k, v in allocation.items())
                 )
             else:

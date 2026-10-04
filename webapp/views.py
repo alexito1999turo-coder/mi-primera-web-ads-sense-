@@ -53,6 +53,15 @@ nav.tabs button[aria-selected="true"]{background:var(--signal-bg);
   padding:18px;margin-bottom:16px}
 label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--faint);margin-bottom:6px}
+/* La clase explicita manda; el `:has` es solo para no tener que acordarse
+   de ponerla. Depender de `:has` a secas ataria el estilo al navegador. */
+label.check,
+label:has(input[type=checkbox]){font-family:inherit;font-size:13px;
+  letter-spacing:0;text-transform:none;color:var(--soft);margin-bottom:4px;
+  display:flex;gap:8px;align-items:flex-start;line-height:1.45}
+label input[type=checkbox]{margin:3px 0 0;flex:none}
+blockquote.nota{margin:12px 0 0;padding:8px 0 8px 13px;
+  border-left:3px solid var(--edge);color:var(--soft);font-size:13px}
 input[type=text],input[type=number],textarea,select{width:100%;font:inherit;
   padding:9px 11px;border:1px solid var(--edge);border-radius:6px;
   background:var(--ground);color:var(--ink)}
@@ -143,6 +152,17 @@ pre{background:var(--ground);border:1px solid var(--edge);border-radius:6px;
   padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px;
   line-height:1.5;max-height:420px}
 .muted{color:var(--faint);font-size:13px}
+.mal{color:var(--bad)}
+.reparto{display:inline-flex;width:92px;height:9px;border-radius:5px;
+  overflow:hidden;vertical-align:middle;margin-right:7px;
+  border:1px solid var(--edge)}
+.reparto i{display:block;height:100%}
+.reparto i:nth-child(1){background:var(--signal)}
+.reparto i:nth-child(2){background:var(--measured)}
+.reparto i:nth-child(3){background:var(--faint)}
+td.n b{font-weight:700}
+#tar-planes input{margin:0}
+#tar-planes td{padding:4px 6px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 """
 
@@ -638,6 +658,211 @@ async function guardarObservacion(){
   finally { boton.disabled = false; }
 }
 
+/* --- 6. negocio -------------------------------------------------------
+ *
+ * Las cifras de aqui no son una recomendacion de precio: son un calculo. Lo
+ * que vale es lo que pasa al mover una palanca, que es lo que distingue un
+ * plan de una tarifa escrita en una servilleta.
+ */
+function numero(sel, defecto){
+  var v = parseFloat($(sel).value);
+  return isFinite(v) ? v : defecto;
+}
+
+function planesDelFormulario(){
+  return $$("#tar-planes tr[data-plan]").map(function(fila){
+    var c = fila.querySelectorAll("input");
+    return {nombre: c[0].value, precio_mes: parseFloat(c[1].value),
+            paginas: parseInt(c[2].value, 10),
+            minutos_revision: parseFloat(c[3].value)};
+  });
+}
+
+async function calcularTarifa(){
+  var boton = $("#tar-go");
+  boton.disabled = true;
+  try {
+    var r = await post("/api/tarifa", {
+      planes: planesDelFormulario(),
+      coste_hora: numero("#tar-hora", 45),
+      herramientas_mes: numero("#tar-herr", 120),
+      reparaciones: numero("#tar-rep", 0.6),
+      fijos_mes: numero("#tar-fijos", 4000),
+      minutos_medidos: $("#tar-cron").checked,
+      lotes: $("#tar-lotes").checked,
+    });
+    pintarTarifa(r);
+  } catch(e){ fallo("#tar-out", e); }
+  finally { boton.disabled = false; }
+}
+
+function pintarTarifa(r){
+  var h = '<div class="panel"><h3>Margen por plan</h3>' +
+    '<div class="scroll"><table><thead><tr><th>Plan</th>' +
+    '<th class="n">$/mes</th><th class="n">Paginas</th><th class="n">$/pagina</th>' +
+    '<th class="n">Coste/pagina</th><th class="n">Margen</th>' +
+    "<th>Reparto del coste</th></tr></thead><tbody>";
+  r.planes.forEach(function(p){
+    h += "<tr><td>" + esc(p.nombre) + '</td><td class="n">' + sp(p.precio_mes) +
+      '</td><td class="n">' + sp(p.paginas) + '</td><td class="n">' +
+      p.precio_pagina.toFixed(2) + '</td><td class="n">' +
+      p.coste_pagina.toFixed(2) + '</td><td class="n">' +
+      (p.sano ? "" : "<b>") + p.margen_pct.toFixed(0) + "%" +
+      (p.sano ? "" : "</b>") + "</td><td>" + barras(p.reparto) + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+
+  var peor = r.planes.slice().sort(function(a,b){
+    return b.reparto.revision - a.reparto.revision; })[0];
+  if (peor){
+    h += '<p class="note">El reparto es la conclusion, no el margen: en «' +
+      esc(peor.nombre) + "» el modelo es el " + peor.reparto.modelo +
+      "% del coste y la revision el " + peor.reparto.revision +
+      "%. Competir en precio de tokens es optimizar la parte barata, y bajar " +
+      "de modelo no ahorra: sube los minutos de revision, que es la cara.</p>";
+  }
+  h += "</div>";
+
+  h += '<div class="panel"><h3>Que pasa si se mueve una palanca</h3>' +
+    '<p class="note">Un plan con buen margen que se rompe al cronometrar la ' +
+    "revision no es un plan con buen margen: es un plan que depende de una " +
+    "cifra que nadie ha medido.</p>";
+  Object.keys(r.sensibilidad).forEach(function(nombre){
+    h += "<h4>" + esc(nombre) + "</h4><ul>";
+    r.sensibilidad[nombre].forEach(function(c){
+      h += "<li>" + esc(c.palanca) + ": de " + esc(c.desde) + " a " +
+        esc(c.hasta) + ", el margen " + (c.caida > 0 ? "cae " : "sube ") +
+        Math.abs(c.caida).toFixed(0) + " puntos hasta " +
+        c.despues.toFixed(0) + "%" +
+        (c.rompe ? ' <b class="mal">rompe el plan</b>' : "") + "</li>";
+    });
+    h += "</ul>";
+  });
+  if (r.fragiles.length){
+    h += '<div class="err">Frágiles: ' + esc(r.fragiles.join(", ")) +
+      ". Un solo cambio razonable los deja por debajo del margen minimo.</div>";
+  }
+  h += "</div>";
+
+  var claves = Object.keys(r.punto_muerto || {});
+  if (claves.length){
+    h += '<div class="panel"><h3>Punto muerto</h3><p class="note">Es la unica ' +
+      "cifra que decide si esto es un negocio o un trabajo: si hacen falta " +
+      "mas clientes de los que una persona puede atender, el plan esta mal " +
+      "puesto por bonito que sea el margen.</p><ul>";
+    claves.forEach(function(k){
+      h += "<li>" + esc(r.punto_muerto[k].lectura) + "</li>";
+    });
+    h += "</ul></div>";
+  }
+
+  h += '<div class="panel"><h3>Lo que este calculo NO cuenta</h3>' +
+    '<p class="note">Estas partidas no caben en un coste por pagina porque no ' +
+    "escalan con las paginas sino con los clientes. Son las que convierten un " +
+    "margen de folleto en el margen real.</p><ul>" +
+    "<li><b>Captacion.</b> Reparte sobre la vida del contrato, no sobre el mes.</li>" +
+    "<li><b>Alta y auditoria inicial.</b> El primer mes de un cliente no se " +
+    "parece a los siguientes.</li>" +
+    "<li><b>Gestion de cuenta.</b> Crece con clientes, no con paginas.</li>" +
+    "<li><b>Bajas.</b> Sin tasa de bajas medida, el valor de vida es un deseo.</li>" +
+    '</ul><p class="note">' + r.medido + "% de las cifras de este calculo son " +
+    "mediciones; el resto son supuestos declarados.</p></div>";
+
+  h += '<details><summary>Ver la tarifa completa en markdown</summary><pre>' +
+    esc(r.markdown) + "</pre></details>";
+  $("#tar-out").innerHTML = h;
+}
+
+function barras(rep){
+  var partes = [["modelo", rep.modelo], ["revision", rep.revision],
+                ["herram.", rep.herramientas]];
+  return '<span class="reparto">' + partes.map(function(x){
+    return '<i style="width:' + Math.max(x[1], 0) + '%" title="' + x[0] + " " +
+      x[1] + '%"></i>';
+  }).join("") + "</span> " + partes.filter(function(x){ return x[1] >= 10; })
+    .map(function(x){ return x[0] + " " + x[1] + "%"; }).join(" · ");
+}
+
+async function generarInforme(){
+  var boton = $("#inf-go");
+  boton.disabled = true;
+  try {
+    var r = await post("/api/informe", {
+      cliente: ($("#inf-cliente").value || "").trim().toLowerCase(),
+      periodo: $("#inf-periodo").value,
+      site: $("#inf-site").value,
+      pages_blocked: numero("#inf-bloq", 0),
+      publishable_as_is: numero("#inf-pub", 0),
+      monthly_cap: numero("#inf-tope", 24),
+      languages: ($("#inf-idiomas").value || "").split(",")
+        .map(function(s){ return s.trim(); }).filter(Boolean),
+      languages_human_reviewed: ($("#inf-revisados").value || "").split(",")
+        .map(function(s){ return s.trim(); }).filter(Boolean),
+    });
+    pintarInforme(r);
+  } catch(e){ fallo("#inf-out", e); }
+  finally { boton.disabled = false; }
+}
+
+var ORIGENES = {medido: "medido", estimado: "estimado", supuesto: "SUPUESTO"};
+
+function pintarInforme(r){
+  var h = '<div class="tiles">' +
+    '<div class="tile"><b>' + r.medido + '%</b><span>de las cifras son ' +
+    "mediciones</span></div>" +
+    '<div class="tile"><b>' + (r.entregable ? "si" : "no") +
+    '</b><span>el mes se puede cerrar</span></div>' +
+    tile(r.incognitas.length, "cosas que no sabemos") + "</div>";
+  h += '<div class="panel"><h3>' + esc(r.titular) + "</h3></div>";
+
+  r.secciones.forEach(function(s){
+    h += '<div class="panel"><h3>' + esc(s.titulo) + "</h3>";
+    if (s.cifras.length){
+      h += '<div class="scroll"><table><thead><tr><th>Dato</th><th>Valor</th>' +
+        "<th>Procedencia</th><th>De donde sale</th></tr></thead><tbody>";
+      s.cifras.forEach(function(f){
+        var marca = ORIGENES[f.origen] || f.origen;
+        h += "<tr><td>" + esc(f.label) + "</td><td><b>" + esc(f.valor) +
+          "</b></td><td>" + (f.origen === "supuesto"
+            ? '<b class="mal">' + marca + "</b>" : marca) +
+          '</td><td class="muted">' + esc(f.base || "") + "</td></tr>";
+      });
+      h += "</tbody></table></div>";
+    }
+    s.lineas.forEach(function(l){
+      // El `>` es marca de cita de markdown. En HTML no se enseña: se cita.
+      h += /^>\s/.test(l)
+        ? '<blockquote class="nota">' + esc(l.replace(/^>\s*/, "")) + "</blockquote>"
+        : '<p class="note">' + esc(l) + "</p>";
+    });
+    h += "</div>";
+  });
+
+  h += '<div class="panel"><h3>Lo que todavia no sabemos</h3>';
+  if (r.incognitas.length){
+    h += '<p class="note">Esta seccion la genera el sistema. No se puede ' +
+      "quitar sin quitar los datos que la producen.</p><ul>";
+    r.incognitas.forEach(function(u){ h += "<li>" + esc(u) + "</li>"; });
+    h += "</ul>";
+  } else {
+    h += '<p class="note">Nada pendiente de medir en el alcance contratado.</p>';
+  }
+  h += "</div>";
+
+  h += '<div class="panel"><h3>Que haria cambiar la recomendacion</h3><ul>';
+  r.alternativas.forEach(function(w){ h += "<li>" + esc(w) + "</li>"; });
+  h += "</ul></div>";
+
+  if (r.bloqueantes.length){
+    h += '<div class="err"><b>Sin resolver:</b><ul>';
+    r.bloqueantes.forEach(function(b){ h += "<li>" + esc(b) + "</li>"; });
+    h += "</ul></div>";
+  }
+  h += '<details><summary>Ver el informe completo en markdown, listo para ' +
+    'enviar</summary><pre>' + esc(r.markdown) + "</pre></details>";
+  $("#inf-out").innerHTML = h;
+}
+
 /* --- arranque --------------------------------------------------------- */
 $$("nav.tabs button").forEach(function(b){
   b.addEventListener("click", function(){ abrir(b.getAttribute("data-tab")); });
@@ -653,6 +878,8 @@ $("#mem-go").addEventListener("click", verMemoria);
 $("#mem-check").addEventListener("click", comprobarBorrador);
 $("#mem-save").addEventListener("click", guardarPagina);
 $("#mem-obs-go").addEventListener("click", guardarObservacion);
+$("#tar-go").addEventListener("click", calcularTarifa);
+$("#inf-go").addEventListener("click", generarInforme);
 
 var EJEMPLO_CIT = "# Coste de un sistema septico aerobico\n\n" +
   "## Cuanto cuesta instalar un sistema aerobico en Texas?\n\n" +
@@ -679,7 +906,8 @@ $("#clu-csv").value = "Keyword,Search Volume,CPC\n" +
   "mantenimiento septico aerobico,800,7\n";
 
 var inicial = (location.hash || "#auditoria").slice(1);
-abrir(["auditoria","citabilidad","oportunidad","clusters","memoria"].indexOf(inicial) >= 0
+abrir(["auditoria","citabilidad","oportunidad","clusters","memoria","negocio"]
+      .indexOf(inicial) >= 0
       ? inicial : "auditoria");
 medirCitabilidad();
 """
@@ -698,6 +926,7 @@ BODY = """
   <button data-tab="oportunidad" aria-selected="false">3 · Oportunidad</button>
   <button data-tab="clusters" aria-selected="false">4 · Clusters</button>
   <button data-tab="memoria" aria-selected="false">5 · Memoria</button>
+  <button data-tab="negocio" aria-selected="false">6 · Negocio</button>
 </nav>
 
 <!-- 1 -->
@@ -867,6 +1096,83 @@ BODY = """
     sus numeros.</p>
   </div>
   <div id="mem-obs-out"></div>
+</div>
+<!-- 6 -->
+<div data-panel="negocio" hidden>
+  <div class="panel">
+    <h2>Que cuesta esto y donde esta el margen</h2>
+    <p class="note">Un precio que no sale de un coste medido es una cifra de
+    folleto: dura hasta el primer cliente que pide veinte paginas al mes y
+    descubre que el margen se lo come la revision. Esto calcula el coste por
+    sus partes y, lo que importa mas, dice cual de ellas manda y que pasa al
+    moverla.</p>
+    <div class="scroll"><table id="tar-planes"><thead><tr>
+      <th>Plan</th><th>Precio/mes</th><th>Paginas</th><th>Min. revision</th>
+    </tr></thead><tbody>
+      <tr data-plan><td><input type="text" value="Inicio"></td>
+        <td><input type="number" value="490" min="0" step="10"></td>
+        <td><input type="number" value="8" min="1" step="1"></td>
+        <td><input type="number" value="14" min="0" step="1"></td></tr>
+      <tr data-plan><td><input type="text" value="Crecimiento"></td>
+        <td><input type="number" value="1290" min="0" step="10"></td>
+        <td><input type="number" value="24" min="1" step="1"></td>
+        <td><input type="number" value="12" min="0" step="1"></td></tr>
+      <tr data-plan><td><input type="text" value="Cartera"></td>
+        <td><input type="number" value="2900" min="0" step="10"></td>
+        <td><input type="number" value="60" min="1" step="1"></td>
+        <td><input type="number" value="9" min="0" step="1"></td></tr>
+    </tbody></table></div>
+    <div class="row">
+      <div><label for="tar-hora">Coste/hora revision</label>
+        <input type="number" id="tar-hora" value="45" min="0" step="1"></div>
+      <div><label for="tar-herr">Herramientas/mes</label>
+        <input type="number" id="tar-herr" value="120" min="0" step="10"></div>
+      <div><label for="tar-rep">Reparaciones/pagina</label>
+        <input type="number" id="tar-rep" value="0.6" min="0" step="0.1"></div>
+      <div><label for="tar-fijos">Estructura/mes</label>
+        <input type="number" id="tar-fijos" value="4000" min="0" step="100"></div>
+      <div><button class="go" id="tar-go" type="button">Calcular</button></div>
+    </div>
+    <p class="note" style="margin-top:10px">
+      <label class="check"><input type="checkbox" id="tar-lotes" checked> API de lotes
+      (50% de descuento; generar contenido no es sensible a latencia)</label><br>
+      <label class="check"><input type="checkbox" id="tar-cron"> Los minutos de revision
+      estan cronometrados, no estimados</label>
+    </p>
+  </div>
+  <div id="tar-out"></div>
+
+  <div class="panel">
+    <h3>Informe mensual del cliente</h3>
+    <p class="note">Se ensambla desde el almacen de la pestana 5. Ninguna cifra
+    se teclea: si no esta medida, no aparece o aparece marcada. Lleva una
+    seccion de lo que no sabemos, generada, que no se puede quitar sin quitar
+    los datos que la producen.</p>
+    <div class="row">
+      <div class="grow"><label for="inf-cliente">Cliente</label>
+        <input type="text" id="inf-cliente" value="demo" autocomplete="off"
+               spellcheck="false"></div>
+      <div><label for="inf-periodo">Periodo</label>
+        <input type="text" id="inf-periodo" value="2026-10" autocomplete="off"></div>
+      <div class="grow"><label for="inf-site">Dominio</label>
+        <input type="text" id="inf-site" placeholder="cliente.com"
+               autocomplete="off" spellcheck="false"></div>
+      <div><button class="go" id="inf-go" type="button">Generar</button></div>
+    </div>
+    <div class="row">
+      <div><label for="inf-bloq">Bloqueadas</label>
+        <input type="number" id="inf-bloq" value="0" min="0"></div>
+      <div><label for="inf-pub">Publicables tal cual</label>
+        <input type="number" id="inf-pub" value="0" min="0"></div>
+      <div><label for="inf-tope">Tope mensual</label>
+        <input type="number" id="inf-tope" value="24" min="1"></div>
+      <div class="grow"><label for="inf-idiomas">Idiomas publicados</label>
+        <input type="text" id="inf-idiomas" value="es" autocomplete="off"></div>
+      <div class="grow"><label for="inf-revisados">Con revision nativa</label>
+        <input type="text" id="inf-revisados" value="es" autocomplete="off"></div>
+    </div>
+  </div>
+  <div id="inf-out"></div>
 </div>
 </div>
 """

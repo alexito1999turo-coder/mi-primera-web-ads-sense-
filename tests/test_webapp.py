@@ -424,3 +424,90 @@ class TestMemoriaHTTP(unittest.TestCase):
         fila = [m for m in estado["metricas"] if m["nombre"] == "cpc"][0]
         self.assertIsNone(fila["media"])
         self.assertEqual(fila["medidas"], 0)
+
+
+class TestNegocioHTTP(unittest.TestCase):
+    """Tarifa e informe por HTTP."""
+
+    @classmethod
+    def setUpClass(cls):
+        import os
+        import tempfile
+
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.antes = os.environ.get("BANCO_DATOS")
+        os.environ["BANCO_DATOS"] = cls.tmp.name
+        cls.app = Background().__enter__()
+
+    @classmethod
+    def tearDownClass(cls):
+        import os
+
+        cls.app.__exit__(None, None, None)
+        if cls.antes is None:
+            os.environ.pop("BANCO_DATOS", None)
+        else:
+            os.environ["BANCO_DATOS"] = cls.antes
+        cls.tmp.cleanup()
+
+    def test_la_tarifa_por_defecto_calcula_y_declara_lo_supuesto(self):
+        estado, r = pedir(self.app.base, "/api/tarifa", {}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertEqual(len(r["planes"]), 3)
+        self.assertLess(r["medido"], 100)
+        self.assertIn("Lo que este calculo NO cuenta", r["markdown"])
+
+    def test_la_revision_pesa_mas_que_el_modelo_en_todos_los_planes(self):
+        _, r = pedir(self.app.base, "/api/tarifa", {}, "POST")
+        for plan in r["planes"]:
+            self.assertGreater(plan["reparto"]["revision"],
+                               plan["reparto"]["modelo"], plan["nombre"])
+
+    def test_una_lista_de_planes_vacia_no_devuelve_los_de_por_defecto(self):
+        estado, r = pedir(self.app.base, "/api/tarifa", {"planes": []}, "POST")
+        self.assertEqual(estado, 400)
+        self.assertIn("al menos un plan", r["error"])
+
+    def test_entradas_malas_de_tarifa_dan_400(self):
+        casos = [
+            {"modelo": "gpt-inventado"},
+            {"coste_hora": "ocho"},
+            {"reparaciones": -1},
+            {"planes": "tres"},
+            {"planes": [{"nombre": "", "precio_mes": 1, "paginas": 1}]},
+            {"planes": [{"nombre": "x", "paginas": 0}]},
+        ]
+        for cuerpo in casos:
+            estado, data = pedir(self.app.base, "/api/tarifa", cuerpo, "POST")
+            self.assertEqual(estado, 400, f"{cuerpo} deberia dar 400")
+            self.assertNotIn("Traceback", json.dumps(data))
+
+    def test_el_informe_sale_del_almacen_de_ese_cliente(self):
+        cuerpo = " ".join(f"Frase {i % 3} del coste. Caso numero {i}."
+                          for i in range(170))
+        pedir(self.app.base, "/api/memoria/pagina",
+              {"cliente": "informe", "slug": "una", "text": cuerpo}, "POST")
+        pedir(self.app.base, "/api/memoria/observacion",
+              {"cliente": "informe", "metrica": "ctr_posicion_1",
+               "valor": 0.2, "fuente": "medido", "nota": "GSC"}, "POST")
+
+        estado, r = pedir(self.app.base, "/api/informe",
+                          {"cliente": "informe", "periodo": "2026-10"}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertEqual(r["cliente"], "informe")
+        self.assertLess(r["medido"], 100)
+        self.assertTrue(r["incognitas"])
+        self.assertIn("Lo que todavia no sabemos", r["markdown"])
+        # La pagina guardada se cuenta sola: no se teclea.
+        hechas = [c for s in r["secciones"] for c in s["cifras"]
+                  if c["label"] == "Paginas publicadas"][0]
+        self.assertEqual(hechas["valor"], "1")
+
+    def test_un_cliente_sin_nada_no_inventa_un_informe(self):
+        estado, r = pedir(self.app.base, "/api/informe",
+                          {"cliente": "vacio", "periodo": "2026-10"}, "POST")
+        self.assertEqual(estado, 200)
+        self.assertTrue(any("canibalizan" in u for u in r["incognitas"]))
+        supuestas = [c for s in r["secciones"] for c in s["cifras"]
+                     if c["origen"] == "supuesto"]
+        self.assertTrue(supuestas, "sin datos, las cifras tienen que ir marcadas")

@@ -502,3 +502,183 @@ def memory_observe(cliente: str, metrica: str, valor, fuente: str = "medido",
                   "Marcada como declarada: NO alimenta los priores. Solo lo "
                   "medido puede apagar una suposicion."),
     }
+
+
+# -- negocio ---------------------------------------------------------------
+PLANES_POR_DEFECTO = (
+    # No son una recomendacion: son el punto de partida para que el calculo
+    # tenga algo que evaluar. Lo que vale del modulo es lo que pasa al
+    # moverlos, no estos tres numeros.
+    {"nombre": "Inicio", "precio_mes": 490, "paginas": 8, "minutos_revision": 14},
+    {"nombre": "Crecimiento", "precio_mes": 1290, "paginas": 24,
+     "minutos_revision": 12},
+    {"nombre": "Cartera", "precio_mes": 2900, "paginas": 60,
+     "minutos_revision": 9},
+)
+
+MAX_PLANES = 8
+
+
+def _numero(data: dict, clave: str, defecto: float, minimo: float,
+            maximo: float) -> float:
+    crudo = data.get(clave, defecto)
+    try:
+        valor = float(crudo)
+    except (TypeError, ValueError):
+        raise BadRequest(f"«{clave}» tiene que ser un numero.") from None
+    if valor != valor or valor in (float("inf"), float("-inf")):
+        raise BadRequest(f"«{clave}» no es un numero utilizable.")
+    if not (minimo <= valor <= maximo):
+        raise BadRequest(f"«{clave}» tiene que estar entre {minimo} y {maximo}.")
+    return valor
+
+
+def tarifa(data: dict) -> dict:
+    """Evalua la tarifa con los supuestos que llegan del formulario.
+
+    Los supuestos SI vienen de fuera aqui, al reves que en el informe mensual,
+    y es correcto: un coste por hora o un precio de plan son decisiones del
+    negocio, no mediciones del sistema. Lo que no se admite de fuera es el
+    resultado; eso lo calcula el modulo y marca que parte sigue supuesta.
+    """
+    from generator.llm import Usage
+    from pricing.plans import Plan, tarifa as evaluar_tarifa
+
+    # «Sin la clave» y «la clave con una lista vacia» no son lo mismo: lo
+    # primero es no haber elegido y lo segundo es haber elegido ninguno.
+    # Devolver los tres planes por defecto a quien pidio cero es contestar a
+    # otra pregunta.
+    if "planes" not in data:
+        entrada = list(PLANES_POR_DEFECTO)
+    else:
+        entrada = data["planes"]
+    if not isinstance(entrada, list):
+        raise BadRequest("«planes» tiene que ser una lista.")
+    if not entrada:
+        raise BadRequest("Hace falta al menos un plan que evaluar.")
+    if len(entrada) > MAX_PLANES:
+        raise BadRequest(f"Como mucho {MAX_PLANES} planes.")
+
+    planes = []
+    for fila in entrada:
+        if not isinstance(fila, dict):
+            raise BadRequest("Cada plan tiene que ser un objeto.")
+        nombre = str(fila.get("nombre", "")).strip()[:40]
+        if not nombre:
+            raise BadRequest("Cada plan necesita un nombre.")
+        planes.append(Plan(
+            nombre=nombre,
+            precio_mes=_numero(fila, "precio_mes", 0, 0, 1_000_000),
+            paginas=int(_numero(fila, "paginas", 1, 1, 1000)),
+            minutos_revision=_numero(fila, "minutos_revision", 12, 0, 600),
+        ))
+
+    uso = Usage(
+        input_tokens=int(_numero(data, "input_tokens", 4000, 0, 10_000_000)),
+        output_tokens=int(_numero(data, "output_tokens", 6000, 0, 10_000_000)),
+        cache_write_tokens=int(_numero(data, "cache_write_tokens", 3000, 0,
+                                       10_000_000)),
+        cache_read_tokens=int(_numero(data, "cache_read_tokens", 24000, 0,
+                                      50_000_000)),
+        calls=1,
+    ) if data.get("usage_medido", True) else None
+
+    kw = dict(
+        usage=uso,
+        modelo=str(data.get("modelo", "claude-opus-5-5"))[:60],
+        lotes=bool(data.get("lotes", True)),
+        coste_hora=_numero(data, "coste_hora", 45, 0, 1000),
+        herramientas_mes=_numero(data, "herramientas_mes", 120, 0, 100_000),
+        reparaciones=_numero(data, "reparaciones", 0.6, 0, 20),
+        minutos_medidos=bool(data.get("minutos_medidos", False)),
+    )
+    from pricing.unit import TARIFAS
+
+    if kw["modelo"] not in TARIFAS:
+        raise BadRequest(
+            f"No hay tarifa declarada para «{kw['modelo']}». Los modelos con "
+            "precio declarado son: " + ", ".join(sorted(TARIFAS)) + "."
+        )
+
+    fijos = _numero(data, "fijos_mes", 4000, 0, 1_000_000)
+    resultado = evaluar_tarifa(planes, fijos_mes=fijos, **kw)
+    return {
+        "medido": resultado.medido,
+        "fragiles": resultado.planes_fragiles,
+        "planes": [
+            {"nombre": r.plan.nombre, "precio_mes": r.plan.precio_mes,
+             "paginas": r.plan.paginas, "precio_pagina": r.precio_pagina,
+             "coste_pagina": r.coste_pagina, "coste_mes": r.coste_mes,
+             "margen_mes": r.margen_mes, "margen_pct": r.margen_pct,
+             "reparto": r.reparto, "sano": r.sano}
+            for r in resultado.resultados
+        ],
+        "sensibilidad": {
+            nombre: [{"palanca": c.palanca, "desde": c.desde, "hasta": c.hasta,
+                      "antes": c.margen_antes, "despues": c.margen_despues,
+                      "caida": c.caida, "rompe": c.rompe}
+                     for c in casos]
+            for nombre, casos in resultado.sensibilidades.items()
+        },
+        "punto_muerto": resultado.puntos_muertos,
+        "markdown": resultado.to_markdown(),
+    }
+
+
+def informe_mensual(cliente: str, data: dict) -> dict:
+    """El informe del mes, ensamblado desde el almacen de ese cliente."""
+    from calibration.priors import PESO_MEDIO, PriorSet
+    from compliance.dossier import MonthRecord
+    from report.monthly import build
+
+    almacen = _store(cliente)
+    periodo = str(data.get("periodo", "")).strip()[:10] or "sin periodo"
+
+    record = MonthRecord(
+        client=cliente, site=str(data.get("site", ""))[:200], period=periodo,
+        pages_published=int(_numero(data, "pages_published",
+                                    len(almacen.pages), 0, 10_000)),
+        pages_blocked=int(_numero(data, "pages_blocked", 0, 0, 10_000)),
+        publishable_as_is=int(_numero(data, "publishable_as_is", 0, 0, 10_000)),
+        monthly_cap=int(_numero(data, "monthly_cap", 24, 1, 1000)),
+        pages_with_own_data=int(_numero(data, "pages_with_own_data",
+                                        len(almacen.pages), 0, 10_000)),
+        pages_with_sources=int(_numero(data, "pages_with_sources",
+                                       len(almacen.pages), 0, 10_000)),
+        sources_cited=[str(s)[:300] for s in (data.get("sources_cited") or [])][:50],
+        languages=[str(s)[:12] for s in (data.get("languages") or [])][:20],
+        languages_human_reviewed=[
+            str(s)[:12] for s in (data.get("languages_human_reviewed") or [])][:20],
+        max_density=data.get("max_density"),
+    )
+
+    # Los priores declarados del sistema, alimentados con lo que el almacen
+    # haya medido. Si no hay nada medido, el informe lo dira solo.
+    priores = PriorSet(label="Curvas de clic y valor")
+    priores.declare("ctr_posicion_1", 0.25, weight=PESO_MEDIO,
+                    source="curva de CTR de mercado")
+    priores.declare("valor_clic_comercial", 3.4, weight=PESO_MEDIO,
+                    source="declarado en la propuesta")
+    almacen.feed(priores)
+
+    informe = build(almacen, record, portfolio=_portfolio(),
+                    prior_sets=[priores])
+    return {
+        "cliente": cliente,
+        "periodo": periodo,
+        "titular": informe.headline(),
+        "medido": informe.measured_share,
+        "entregable": informe.deliverable,
+        "secciones": [
+            {"titulo": s.title,
+             "cifras": [{"label": f.label, "valor": f.value,
+                         "origen": f.provenance, "base": f.basis}
+                        for f in s.figures],
+             "lineas": s.lines}
+            for s in informe.sections
+        ],
+        "incognitas": informe.unknowns,
+        "alternativas": informe.would_change,
+        "bloqueantes": informe.blockers,
+        "markdown": informe.to_markdown(),
+    }

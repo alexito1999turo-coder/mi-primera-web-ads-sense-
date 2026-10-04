@@ -146,6 +146,13 @@ class Handler(BaseHTTPRequestHandler):
                 cliente, data.get("slug", ""), data.get("text", ""),
                 url=data.get("url", ""), role=data.get("role", "")))
             return
+        if path == "/api/tarifa":
+            self._json(200, api.tarifa(data))
+            return
+        if path == "/api/informe":
+            cliente = api.normalize_client(data.get("cliente", ""))
+            self._json(200, api.informe_mensual(cliente, data))
+            return
         if path == "/api/memoria/observacion":
             cliente = api.normalize_client(data.get("cliente", ""))
             self._json(200, api.memory_observe(

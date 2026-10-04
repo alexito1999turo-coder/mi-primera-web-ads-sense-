@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from textos import plural
+
 MEDIDO = "medido"
 ESTIMADO = "estimado"
 SUPUESTO = "supuesto"
@@ -154,10 +156,6 @@ class MonthlyReport:
 # quiere poner» tiene que estar en el codigo, porque en la buena voluntad no
 # aguanta tres meses.
 
-def _plural(n: int, singular: str, plural: str) -> str:
-    return f"{n} {singular if n == 1 else plural}"
-
-
 def _trabajo(store, record) -> Section:
     seccion = Section(title="Lo que se ha hecho")
     publicadas = len(store.pages)
@@ -190,7 +188,7 @@ def _solape(store, portfolio, cliente: str) -> Section:
     if paginas < 2:
         seccion.figures.append(Figure(
             "Solape interno maximo", "no medido", SUPUESTO,
-            f"{_plural(paginas, 'pagina', 'paginas')} en el corpus: hacen falta "
+            f"{plural(paginas, 'pagina', 'paginas')} en el corpus: hacen falta "
             "dos para comparar"))
     else:
         peor = 0.0
@@ -209,7 +207,7 @@ def _solape(store, portfolio, cliente: str) -> Section:
             "Solape interno maximo", f"{peor * 100:.0f}%",
             ESTIMADO if estimado else MEDIDO,
             f"entre '{par[0]}' y '{par[1]}', sobre "
-            f"{_plural(paginas, 'pagina', 'paginas')}"))
+            f"{plural(paginas, 'pagina', 'paginas')}"))
 
     if portfolio is None:
         seccion.figures.append(Figure(
@@ -220,7 +218,7 @@ def _solape(store, portfolio, cliente: str) -> Section:
         if auditoria.sites < 2:
             seccion.figures.append(Figure(
                 "Huella cruzada de la cartera", "no aplica", MEDIDO,
-                f"{_plural(auditoria.sites, 'sitio', 'sitios')} en cartera"))
+                f"{plural(auditoria.sites, 'sitio', 'sitios')} en cartera"))
         else:
             peor = max((c.phrase_similarity for c in auditoria.collisions),
                        default=0.0)
@@ -228,7 +226,7 @@ def _solape(store, portfolio, cliente: str) -> Section:
                 "Parecido maximo con otro sitio de la cartera",
                 f"{peor * 100:.1f}%", ESTIMADO,
                 f"{auditoria.sites} sitios, "
-                f"{_plural(len(auditoria.collisions), 'par', 'pares')}; "
+                f"{plural(len(auditoria.collisions), 'par', 'pares')}; "
                 "estimado desde las firmas"))
             seccion.lines.append(f"> {auditoria.describe()}")
     return seccion
@@ -258,7 +256,7 @@ def _medido(store, prior_sets) -> Section:
         seccion.figures.append(Figure(
             nombre, f"{round(media, 4)}",
             MEDIDO if suficiente else ESTIMADO,
-            f"{_plural(len(medidas), 'observacion', 'observaciones')}"
+            f"{plural(len(medidas), 'observacion', 'observaciones')}"
             + ("" if suficiente else
                f"; hacen falta {MIN_OBSERVACIONES} para llamarlo medicion")))
 
@@ -330,7 +328,7 @@ def _incognitas(store, portfolio, record, prior_sets) -> list[str]:
         medidas = store.observations(nombre, source=ORIGEN_MEDIDO)
         if len(medidas) < MIN_OBSERVACIONES:
             por_metrica.setdefault(nombre, []).append(
-                f"{_plural(len(medidas), 'observacion medida', 'observaciones medidas')} "
+                f"{plural(len(medidas), 'observacion medida', 'observaciones medidas')} "
                 f"de las {MIN_OBSERVACIONES} que hacen falta"
             )
 

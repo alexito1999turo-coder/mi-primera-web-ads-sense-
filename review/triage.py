@@ -6,6 +6,8 @@ con el volumen. Aqui se reparte por riesgo.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -56,7 +58,7 @@ class Queue:
 
     def describe(self, hourly_rate: float = 20.0) -> str:
         return (
-            f"{len(self.assignments)} paginas · "
+            f"{plural(len(self.assignments), 'pagina')} · "
             f"{len(self.by_level(LEVEL_FULL))} revision completa · "
             f"{len(self.by_level(LEVEL_SPOT))} muestreo · "
             f"{len(self.by_level(LEVEL_AUTO))} automatica · "

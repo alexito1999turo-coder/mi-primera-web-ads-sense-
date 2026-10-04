@@ -8,6 +8,8 @@ ha cronometrado.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 
 from .unit import CostePagina, por_pagina
@@ -57,7 +59,7 @@ class Resultado:
         estado = "ok" if self.sano else "AJUSTADO"
         return (
             f"[{estado}] {self.plan.nombre}: {self.plan.precio_mes:.0f} $/mes "
-            f"por {self.plan.paginas} paginas = {self.precio_pagina:.2f} $/pagina. "
+            f"por {plural(self.plan.paginas, 'pagina')} = {self.precio_pagina:.2f} $/pagina. "
             f"Cuesta {self.coste_pagina:.2f} $. Margen {self.margen_pct:.0f}% "
             f"({self.margen_mes:.0f} $/mes). "
             f"{self.medido}% del calculo son datos medidos."

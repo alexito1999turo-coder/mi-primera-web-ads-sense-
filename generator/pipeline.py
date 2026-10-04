@@ -11,6 +11,8 @@ un tercero midio en el producto de la competencia.
 
 from __future__ import annotations
 
+from textos import plural
+
 from dataclasses import dataclass, field
 
 from .brief import Brief
@@ -228,7 +230,7 @@ class BatchStats:
 
     def describe(self) -> str:
         return (
-            f"{self.total} paginas · {self.pass_rate}% pasan las compuertas · "
+            f"{plural(self.total, 'pagina')} · {self.pass_rate}% pasan las compuertas · "
             f"{self.publishable_rate}% publicables tal cual · "
             f"{self.repairs} reparacion(es) · {self.aborted} abortada(s) por brief "
             "incompleto. Linea base del competidor: 52,4% publicables tal cual."
