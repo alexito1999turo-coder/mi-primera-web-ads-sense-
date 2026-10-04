@@ -21,7 +21,7 @@ import unittest
 import urllib.error
 import urllib.request
 
-from webapp.offer import (CAP_PAGES, COMPETITOR_PAGES, PLANS, QUESTIONS,
+from webapp.offer import (CAP_PAGES, COMPETITOR_PAGES, PLANS, PROOF, QUESTIONS,
                           STATE_UNMEASURED, _max_pages, page as offer_page)
 from webapp.server import Background
 
@@ -194,3 +194,32 @@ class TestElTopeNoEsUnaConstanteCopiada(unittest.TestCase):
         for plan in PLANS:
             with self.subTest(plan=plan.name):
                 self.assertLess(plan.pages_per_month, MONTHLY_CAP)
+
+
+class TestLaPaginaNoSeQuedaEnWordPress(unittest.TestCase):
+    """El cliente objetivo de esta pagina es una marca de Shopify.
+
+    La copy decia solo "en tu WordPress" despues de que el publicador aprendiera
+    a hablar con Shopify: le decia al comprador que publicamos en el CMS que el
+    no usa. Esto lo vigila, y vigila tambien que no se prometa de mas.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = offer_page()
+
+    def test_nombra_los_dos_destinos_de_publicacion(self):
+        self.assertIn("Shopify", self.html)
+        self.assertIn("WordPress", self.html)
+
+    def test_el_camino_de_shopify_se_declara_no_medido(self):
+        """La pagina presume de distinguir lo medido de lo supuesto.
+
+        El banco de pruebas simula un WordPress, no una tienda. Decirlo en la
+        tabla es la misma regla que se le aplica a los informes del cliente.
+        """
+        shopify_claims = [c for c in PROOF if "Shopify" in c.statement]
+        self.assertTrue(shopify_claims, "ninguna afirmacion habla de Shopify")
+        for claim in shopify_claims:
+            with self.subTest(claim=claim.statement):
+                self.assertEqual(claim.state, STATE_UNMEASURED)

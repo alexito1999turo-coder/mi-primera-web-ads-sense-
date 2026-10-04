@@ -160,6 +160,13 @@ PROOF = (
         "la propia aplicación. Nada sale de la máquina",
     ),
     Claim(
+        "El publicador de Shopify, contra una tienda de verdad",
+        STATE_UNMEASURED,
+        "el contrato está comprobado con el transporte inyectado, pero el banco "
+        "de pruebas simula un WordPress y no una tienda: cómo responde la API "
+        "Admin de Shopify en producción no se ha medido",
+    ),
+    Claim(
         "Posiciones y citaciones conseguidas en el sitio de un cliente",
         STATE_UNMEASURED,
         "no hay todavía ningún sitio en producción. Cuando lo haya, la cifra irá "
@@ -337,8 +344,9 @@ def _body() -> str:
       atribuir y no encontrar en otras cincuenta fuentes. La señal más
       discriminante es la más simple: un número redondo es consenso, un número
       preciso es una medición.</li>
-      <li><b>Publicar</b> En tu WordPress, en borrador por defecto. Publicar es
-      un acto explícito de alguien, nunca el valor por defecto de una casilla.</li>
+      <li><b>Publicar</b> En tu WordPress o en el blog de tu Shopify, en borrador
+      por defecto. Publicar es un acto explícito de alguien, nunca el valor por
+      defecto de una casilla.</li>
       <li><b>Responder</b> Informe mensual con lo medido y, en su propia
       sección, lo que no se ha medido.</li>
     </ul>
