@@ -44,6 +44,67 @@ class Call:
 
 
 @dataclass
+class Usage:
+    """Lo que una llamada gasto de verdad.
+
+    Sin esto, el coste por pagina de la propuesta comercial es una suposicion
+    con dos decimales, que es la peor clase de suposicion: parece medida. Los
+    tokens de cache van aparte porque se facturan distinto, y porque el ahorro
+    del cache es justo lo que hay que poder demostrar.
+    """
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_write_tokens: int = 0
+    cache_read_tokens: int = 0
+    calls: int = 0
+
+    def add(self, otra: "Usage") -> None:
+        self.input_tokens += otra.input_tokens
+        self.output_tokens += otra.output_tokens
+        self.cache_write_tokens += otra.cache_write_tokens
+        self.cache_read_tokens += otra.cache_read_tokens
+        self.calls += otra.calls
+
+    @classmethod
+    def from_message(cls, message) -> "Usage":
+        """Lee el uso de una respuesta del SDK, sin romperse si falta un campo.
+
+        Los nombres de los campos de cache han cambiado entre versiones del
+        SDK. Un `getattr` con defecto aqui vale mas que una version fijada:
+        el peor fallo posible en este modulo es que una actualizacion del SDK
+        tumbe la generacion por un contador.
+        """
+        uso = getattr(message, "usage", None)
+        if uso is None:
+            return cls(calls=1)
+        return cls(
+            input_tokens=int(getattr(uso, "input_tokens", 0) or 0),
+            output_tokens=int(getattr(uso, "output_tokens", 0) or 0),
+            cache_write_tokens=int(
+                getattr(uso, "cache_creation_input_tokens", 0) or 0),
+            cache_read_tokens=int(
+                getattr(uso, "cache_read_input_tokens", 0) or 0),
+            calls=1,
+        )
+
+    @property
+    def total_input(self) -> int:
+        return self.input_tokens + self.cache_write_tokens + self.cache_read_tokens
+
+    def describe(self) -> str:
+        if not self.calls:
+            return "Sin llamadas registradas."
+        ahorro = ""
+        if self.cache_read_tokens:
+            leidos = self.cache_read_tokens
+            ahorro = (f"; {leidos:,} token(s) servidos de cache"
+                      .replace(",", "."))
+        return (f"{self.calls} llamada(s): {self.total_input:,} de entrada y "
+                f"{self.output_tokens:,} de salida{ahorro}.").replace(",", ".")
+
+
+@dataclass
 class ScriptedLLM:
     """Modelo falso. Con esto el pipeline se verifica sin clave y sin gastar.
 
@@ -98,6 +159,9 @@ class AnthropicLLM:
         self.model = model
         self.cache_system = cache_system
         self._client = client
+        # Se acumula por instancia: un lote entero da el coste del lote sin
+        # tener que instrumentar el pipeline por fuera.
+        self.usage = Usage()
 
     @property
     def client(self):
@@ -140,6 +204,8 @@ class AnthropicLLM:
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
             message = stream.get_final_message()
+
+        self.usage.add(Usage.from_message(message))
 
         if getattr(message, "stop_reason", None) == "refusal":
             details = getattr(message, "stop_details", None)
