@@ -3,7 +3,6 @@
 *.py[cod]
 .venv/
 __pycache__/
-datos/
 informe*.json
 informe*.md
 venv/

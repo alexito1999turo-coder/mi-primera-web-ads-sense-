@@ -7,7 +7,7 @@ satelites enlazan al pilar y un enlace a una pagina que no existe no vale nada.
 
 from __future__ import annotations
 
-from textos import plural
+from textos import plural, porcentajes
 
 from dataclasses import dataclass, field
 
@@ -54,7 +54,7 @@ class Plan:
         for item in items:
             label = item.page.intent
             counts[label] = counts.get(label, 0) + 1
-        return {k: round(100 * v / len(items), 1) for k, v in sorted(counts.items())}
+        return porcentajes(counts)
 
 
 def build(graph: Graph, cap: int = MONTHLY_CAP) -> Plan:

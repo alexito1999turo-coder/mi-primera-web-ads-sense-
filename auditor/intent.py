@@ -8,6 +8,8 @@ de intencion de un sitio es medir cuanto de su trafico esta en riesgo.
 
 from __future__ import annotations
 
+from textos import porcentajes
+
 import re
 from dataclasses import dataclass
 
@@ -33,6 +35,41 @@ SIGNALS: tuple[tuple[str, int, tuple[str, ...]], ...] = (
             "price", "pricing", "cheap", "barato", "calculator", "calculadora",
             "how much", "cuanto cuesta", "cuánto cuesta", "worth it",
             "merece la pena", "brands", "marcas", "which ",
+        ),
+    ),
+    (
+        # Problema: el sistema del que busca esta roto AHORA.
+        #
+        # Esta clase faltaba, y la encontre mirando datos reales de un nicho de
+        # servicios para el hogar: «aerobic septic alarm going off» salia como
+        # «sin determinar», que es tanto como no clasificarla. Es justo la
+        # consulta mas valiosa del nicho — quien tiene la alarma sonando no
+        # esta leyendo, esta buscando a quien llamar o que pieza comprar.
+        #
+        # Va DESPUES de comercial y transaccional a proposito: quien busca
+        # «mejor bomba de repuesto para septico averiado» ya esta comprando, y
+        # esa senal manda sobre la de averia. Y va ANTES de informacional
+        # porque «como arreglar X» con una averia detras no es curiosidad.
+        #
+        # El 55 de supervivencia es un PRIOR declarado, no una medicion: la
+        # respuesta generada cubre estas consultas, pero el clic sobrevive
+        # mejor que en lo informacional puro porque la respuesta generica no
+        # sirve para un modelo concreto averiado. Se puede medir con los datos
+        # de Search Console del propio sitio, y entonces este numero sobra.
+        "problem",
+        55,
+        (
+            "not working", "no funciona", "stopped working", "dejo de funcionar",
+            "dejó de funcionar", "going off", "keeps going off", "wont stop",
+            "won't stop", "no para", "not draining", "no drena", "backing up",
+            "overflow", "desborda", "clogged", "atascado", "atascada",
+            "leaking", "gotea", "fuga", "smell", "smells", "odor", "odour",
+            "olor", "huele", "broken", "roto", "rota", "averiado", "averiada",
+            "failure", "fallo", "failing", "error code", "codigo de error",
+            "código de error", "beeping", "pitando", "pita", "alarm", "alarma",
+            "troubleshoot", "problema", "problems", "problemas", "fix ",
+            "repair", "reparar", "arreglar", "won't turn on", "no enciende",
+            "replace", "reemplazar", "sustituir",
         ),
     ),
     (
@@ -85,4 +122,4 @@ def distribution(items: list[Intent]) -> dict[str, float]:
     counts: dict[str, int] = {}
     for item in items:
         counts[item.label] = counts.get(item.label, 0) + 1
-    return {label: round(100 * count / total, 1) for label, count in sorted(counts.items())}
+    return porcentajes(counts)

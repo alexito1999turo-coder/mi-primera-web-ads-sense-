@@ -2,7 +2,7 @@
 
 import unittest
 
-from textos import cifra, lista, plural, porcentaje
+from textos import cifra, lista, plural, porcentaje, porcentajes
 
 
 class TestPlural(unittest.TestCase):
@@ -86,3 +86,38 @@ class TestPorcentaje(unittest.TestCase):
         self.assertEqual(porcentaje(0.4237, 1), "42,4%")
         self.assertEqual(porcentaje(1.0), "100%")
         self.assertEqual(porcentaje(0), "0%")
+
+
+class TestPorcentajes(unittest.TestCase):
+    """Un reparto que no suma 100 se lee como descuido en el resto de cifras."""
+
+    def test_suman_cien_exactamente(self):
+        for conteos in (
+            {"a": 1, "b": 1, "c": 1},                       # tercios
+            {"a": 1, "b": 1, "c": 1, "d": 1, "e": 1, "f": 1, "g": 1},
+            {"informational": 3, "problem": 2, "commercial": 2,
+             "transactional": 1, "undetermined": 1},
+            {"a": 7, "b": 11, "c": 13},
+        ):
+            with self.subTest(conteos=conteos):
+                self.assertAlmostEqual(sum(porcentajes(conteos).values()), 100.0,
+                                       places=6)
+
+    def test_el_vacio_no_divide_por_cero(self):
+        self.assertEqual(porcentajes({}), {})
+        self.assertEqual(porcentajes({"a": 0}), {})
+
+    def test_una_sola_clase_se_lleva_todo(self):
+        self.assertEqual(porcentajes({"a": 5}), {"a": 100.0})
+
+    def test_ninguna_parte_se_desvia_mas_de_lo_que_obliga_el_redondeo(self):
+        conteos = {"a": 1, "b": 1, "c": 1}
+        reparto = porcentajes(conteos)
+        for clave, valor in reparto.items():
+            exacto = 100 * conteos[clave] / sum(conteos.values())
+            self.assertLess(abs(valor - exacto), 0.1, clave)
+
+    def test_es_estable_entre_ejecuciones(self):
+        """Con empate en el resto, el desempate tiene que ser determinista."""
+        conteos = {"b": 1, "a": 1, "c": 1}
+        self.assertEqual(porcentajes(conteos), porcentajes(dict(sorted(conteos.items()))))

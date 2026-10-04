@@ -27,6 +27,12 @@ CTR_FLOOR = 0.004
 # algun sitio.
 AIO_EXPOSURE: dict[str, float] = {
     "informational": 0.90,
+    # Problema: la respuesta generada SI cubre estas consultas — «por que pita
+    # la alarma» tiene AIO casi siempre — pero el clic sobrevive mejor que en
+    # lo informacional puro, porque una respuesta generica no sirve para un
+    # modelo concreto averiado y el que busca necesita una pieza, un manual o
+    # un telefono. Prior declarado, no medicion.
+    "problem": 0.70,
     "undetermined": 0.60,
     "commercial": 0.45,
     "transactional": 0.20,
@@ -74,6 +80,11 @@ def click_retention(intent: str) -> float:
 CLICK_VALUE: dict[str, float] = {
     "informational": 0.15,
     "undetermined": 0.40,
+    # Un clic de averia vale casi como uno comercial y en algunos nichos mas:
+    # quien tiene el sistema roto compra hoy, no compara durante tres semanas.
+    # Para monetizar con publicidad ademas es de los que mejor RPM dan, porque
+    # quien puja por esas palabras son servicios y recambios.
+    "problem": 0.90,
     "commercial": 1.00,
     "transactional": 2.50,
 }

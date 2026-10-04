@@ -45,3 +45,54 @@ class TestIntencion(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestIntencionDeProblema(unittest.TestCase):
+    """La clase que faltaba, encontrada con datos reales de un nicho.
+
+    «aerobic septic alarm going off» salia como «sin determinar», que es
+    tanto como no clasificarla, y es la consulta mas valiosa del nicho: quien
+    tiene la alarma sonando no esta leyendo.
+    """
+
+    def clasificar(self, texto):
+        return classify(texto, texto)
+
+    def test_una_averia_se_reconoce_en_los_dos_idiomas(self):
+        for consulta in ("aerobic septic alarm going off",
+                         "septic air pump not working",
+                         "septic tank backing up",
+                         "la alarma septica no para de pitar",
+                         "mi fosa septica desborda",
+                         "la bomba no funciona"):
+            with self.subTest(consulta=consulta):
+                self.assertEqual(self.clasificar(consulta).label, "problem")
+
+    def test_comprar_manda_sobre_averia(self):
+        """Quien busca el repuesto ya esta comprando, no diagnosticando."""
+        self.assertEqual(
+            self.clasificar("best replacement septic air pump").label, "commercial")
+        self.assertEqual(
+            self.clasificar("buy septic alarm replacement").label, "transactional")
+
+    def test_averia_manda_sobre_informacional(self):
+        """«Como arreglar X» con una averia detras no es curiosidad."""
+        self.assertEqual(self.clasificar("how to fix septic alarm").label, "problem")
+
+    def test_sobrevive_mas_clic_que_lo_informacional_y_menos_que_lo_comercial(self):
+        problema = self.clasificar("septic alarm going off").click_survival
+        info = self.clasificar("what is an aerobic septic system").click_survival
+        comercial = self.clasificar("aerobic septic system cost").click_survival
+        self.assertLess(info, problema)
+        self.assertLess(problema, comercial)
+
+    def test_tiene_curva_y_valor_declarados(self):
+        """Sin esto cae en el defecto y el valor sale mal sin avisar."""
+        from insight.curves import AIO_EXPOSURE, CLICK_VALUE, click_value
+
+        self.assertIn("problem", AIO_EXPOSURE)
+        self.assertIn("problem", CLICK_VALUE)
+        self.assertGreater(click_value("problem"), click_value("informational"))
+
+    def test_una_averia_no_cuenta_como_informacional_en_riesgo(self):
+        self.assertFalse(self.clasificar("septic alarm going off").at_risk)

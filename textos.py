@@ -84,3 +84,34 @@ def lista(items: list[str], union: str = "y") -> str:
 def porcentaje(valor: float, decimales: int = 0) -> str:
     """De 0-1 a «42%». El error de meter aqui un 42 ya escalado se ve solo."""
     return f"{cifra(valor * 100, decimales)}%"
+
+
+def porcentajes(conteos: dict[str, int], decimales: int = 1) -> dict[str, float]:
+    """Reparto porcentual que suma 100 exactamente.
+
+    Redondear cada parte por su cuenta no suma 100: con cinco clases de
+    intencion el reparto salia 99,9%, y en un informe de cliente eso se lee
+    como descuido en el resto de las cifras. Lo destapo anadir una clase
+    nueva, no un test escrito a proposito.
+
+    Se usa el metodo del resto mayor, que es el de los repartos de escanos:
+    se dan las partes enteras y lo que sobra va a quien tenga el resto mas
+    grande. Es la unica forma de que cuadre sin falsear ninguna parte mas de
+    lo que el redondeo ya obliga.
+    """
+    total = sum(conteos.values())
+    if not total:
+        return {}
+
+    escala = 10 ** decimales
+    objetivo = 100 * escala
+    exactos = {k: 100 * v * escala / total for k, v in conteos.items()}
+    suelo = {k: int(v) for k, v in exactos.items()}
+    sobran = objetivo - sum(suelo.values())
+
+    # A quien mas resto tenga. Con empate, por nombre, para que dos
+    # ejecuciones con los mismos datos den el mismo reparto.
+    orden = sorted(exactos, key=lambda k: (-(exactos[k] - suelo[k]), k))
+    for k in orden[:sobran]:
+        suelo[k] += 1
+    return {k: suelo[k] / escala for k in sorted(suelo)}
