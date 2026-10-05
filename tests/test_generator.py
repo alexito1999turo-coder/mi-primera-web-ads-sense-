@@ -122,6 +122,20 @@ class TestCompuertas(unittest.TestCase):
                  f"La cifra viene de [la guia de la EPA]({FUENTE}).")
         self.assertEqual(unsupported_claims(Draft(slug="x", title="t", body=texto)), [])
 
+    def test_el_metodo_propio_respalda_sus_cuatro_terminaciones(self):
+        """El prefijo «segun nuestr-» tiene que cubrir -o, -a, -os y -as.
+
+        Lo escribio asi quien lo escribio, pero el \\b del final exigia que la
+        palabra acabase en «nuestr» y ninguna acaba ahi: la alternativa estaba
+        muerta y el specimen limpio salia bloqueado.
+        """
+        for cola in ("nuestro calculo", "nuestra estimacion",
+                     "nuestros registros", "nuestras mediciones"):
+            frase = f"Con las tarifas de 2026, segun {cola} son unos 110 $ al ano."
+            with self.subTest(cola=cola):
+                draft = Draft(slug="x", title="t", body=frase)
+                self.assertEqual(unsupported_claims(draft), [])
+
     def test_bloquea_densidad_anomala(self):
         term = "cuanto cuesta un sistema septico aerobico"
         body = (f"14.200 $ segun [la EPA]({FUENTE}). " + f"{term}. " * 40 + RELLENO)

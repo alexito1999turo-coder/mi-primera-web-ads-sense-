@@ -144,7 +144,7 @@ class GateResult:
 # confundia dos cosas distintas: tener fuente y tener enlace. El dato propio es
 # su propia fuente, siempre que diga como se obtuvo.
 OWN_METHOD = re.compile(
-    r"\b(?:muestra propia|de nuestra|de nuestro|segun nuestr|según nuestr|"
+    r"\b(?:muestra propia|de nuestra|de nuestro|segun nuestr[oa]s?|según nuestr[oa]s?|"
     r"nuestra muestra|nuestro registro|medimos|recogimos|entrevistamos|"
     r"analizamos|pedimos presupuesto|mediana de \d|media de \d|promedio de \d|"
     r"sobre \d[\d.,]* (?:presupuestos|casos|observaciones|respuestas|muestras))\b",
