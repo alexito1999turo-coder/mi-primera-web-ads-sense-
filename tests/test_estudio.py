@@ -552,3 +552,60 @@ class SemanaContraCompuertas(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ArtefactoDeLaSala(unittest.TestCase):
+    """La pagina suelta y el motor tienen que decir lo mismo.
+
+    Es la misma guarda que `test_puerto_js` pone sobre la copia JavaScript del
+    modulo de economia: un artefacto que se publica con cifras pegadas a mano
+    envejece mal, porque corregir un umbral deja de corregirlo ahi.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from scripts.sala_artefacto import MARCA, construir
+        cls.MARCA = MARCA
+        cls.html = construir(HOY)
+        crudo = cls.html.split('<script id="datos" type="application/json">')[1]
+        cls.crudo = crudo.split("</script>")[0]
+        import json
+        cls.datos = json.loads(cls.crudo.replace("<\\/", "</"))
+
+    def test_no_queda_ninguna_marca_sin_sustituir(self):
+        self.assertNotIn(self.MARCA, self.html)
+
+    def test_el_json_no_cierra_la_etiqueta_antes_de_tiempo(self):
+        """Un «</» dentro del <script> cerraria la etiqueta y el fallo seria mudo."""
+        self.assertNotIn("</", self.crudo)
+
+    def test_el_fallo_del_artefacto_es_el_del_tribunal(self):
+        f = fallo()
+        self.assertEqual(self.datos["fallo"]["ganadora"], f.ganadora.clave)
+        self.assertEqual(self.datos["fallo"]["medias"], f.medias)
+        self.assertEqual(len(self.datos["fallo"]["enmiendas"]), len(f.enmiendas))
+
+    def test_las_cifras_de_la_carrera_son_las_del_motor(self):
+        c = Carrera(hoy=HOY)
+        self.assertEqual(self.datos["carrera"]["vistas_necesarias"], c.vistas_necesarias)
+        self.assertEqual(self.datos["rutas"]["veces_mas_vistas"], c.ventaja_sobre_shorts)
+
+    def test_la_carga_semanal_es_la_del_plan(self):
+        self.assertEqual(self.datos["plan"]["horas_semana"], horas_semana())
+        self.assertEqual(self.datos["plan"]["carga"], carga_por_agente())
+
+    def test_cada_agente_viaja_con_su_turno_para_poder_pararlo(self):
+        """La pagina deja cerrar una compuerta, y para eso necesita el reloj."""
+        for dia in self.datos["dias"]:
+            self.assertEqual(len(dia["agentes"]), len(PLANTILLA))
+            for a in dia["agentes"]:
+                self.assertIn("inicio", a)
+                self.assertIn("minutos", a)
+            activos = [a for a in dia["agentes"] if a["inicio"] >= 0]
+            self.assertEqual(len(activos), len(SEMANA[dia["dia"]["indice"] - 1].turnos))
+
+    def test_las_pilas_cubren_el_rango_de_presupuesto(self):
+        pilas = self.datos["pilas"]
+        self.assertIn("0", pilas)
+        self.assertEqual(pilas["0"]["coste_mes"], 0.0)
+        self.assertGreaterEqual(pilas["100"]["coste_mes"], pilas["25"]["coste_mes"])

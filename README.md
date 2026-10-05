@@ -183,7 +183,13 @@ todas como automáticas.
 python3 -m estudio                      # fallo, semana, carrera y pila
 python3 -m estudio --animar 5           # la sala moviéndose en el terminal
 python3 -m estudio --calendario 4
+python3 -m scripts.sala_artefacto       # artefactos/sala.html, sin servidor
 ```
+
+La sala vive en tres sitios y en ninguno se escriben las cifras a mano: la
+pestaña 7 del banco, el terminal, y `artefactos/sala.html` — una página suelta
+que se abre sin servidor y lleva el JSON del motor dentro. Una prueba cruza las
+dos cosas, igual que la que vigila el puerto JavaScript del módulo de economía.
 
 ## Uso por línea de comandos
 

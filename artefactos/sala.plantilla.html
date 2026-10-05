@@ -1,0 +1,615 @@
+<title>Sala Cifra Negra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Tablero de control: cabecera fija con el reloj, la sala como protagonista y
+   debajo las tres lecturas que la explican — fallo, carrera y carga. */
+:root{
+  --ground:#e4e7ea; --panel:#f7f8f9; --sunk:#edeff1;
+  --ink:#15181d; --soft:#596170; --faint:#848d9c; --line:#c6ccd4;
+  --sello:#9e2b25; --sello-bg:#f6e7e5;
+  --ok:#2f6b57; --ok-bg:#e4efe9;
+  --ojo:#8a6a1f; --ojo-bg:#f6eedb;
+  --trabajo:#285e8e; --trabajo-bg:#e4ecf4;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --texto:"Spectral",Georgia,"Times New Roman",serif;
+  --dato:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101317; --panel:#191d23; --sunk:#14181d;
+  --ink:#e6eaef; --soft:#99a3b1; --faint:#6e7886; --line:#2b323b;
+  --sello:#d4645c; --sello-bg:#2a1715;
+  --ok:#5fa98b; --ok-bg:#132620;
+  --ojo:#c9a24a; --ojo-bg:#262012;
+  --trabajo:#6ea4d8; --trabajo-bg:#141f2b;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#101317; --panel:#191d23; --sunk:#14181d;
+  --ink:#e6eaef; --soft:#99a3b1; --faint:#6e7886; --line:#2b323b;
+  --sello:#d4645c; --sello-bg:#2a1715;
+  --ok:#5fa98b; --ok-bg:#132620;
+  --ojo:#c9a24a; --ojo-bg:#262012;
+  --trabajo:#6ea4d8; --trabajo-bg:#141f2b;
+  color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--texto);
+  font-size:16px;line-height:1.55;margin:0}
+.envoltura{max-width:1120px;margin:0 auto;padding-inline:18px;padding-block:0 56px}
+h1,h2,h3,h4{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,5vw,42px);font-weight:900;letter-spacing:-.02em;line-height:1.04}
+h2{font-size:clamp(19px,2.6vw,25px);font-weight:700;letter-spacing:-.01em}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+a{color:var(--trabajo)}
+.m{font-family:var(--dato);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--dato);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint)}
+
+/* --- cabecera ---------------------------------------------------------- */
+header.alto{border-bottom:1px solid var(--line);background:var(--panel);
+  margin-bottom:26px}
+header.alto .envoltura{padding-block:26px 22px}
+.sello{display:inline-block;border:2px solid var(--sello);color:var(--sello);
+  font-family:var(--dato);font-size:10.5px;letter-spacing:.16em;padding:3px 8px;
+  text-transform:uppercase;transform:rotate(-1.5deg);margin-bottom:12px}
+header.alto p.pie{color:var(--soft);max-width:62ch;margin-top:12px;font-size:15px}
+
+section{margin-top:40px}
+section > p.intro{color:var(--soft);max-width:66ch;margin-top:8px}
+.titulo{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+
+/* --- la sala ----------------------------------------------------------- */
+.mandos{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:18px 0 12px}
+.dias{display:flex;gap:3px}
+button{font:inherit;cursor:pointer;color:inherit}
+.dias button,.boton{font-family:var(--dato);font-size:12px;padding:7px 11px;
+  border:1px solid var(--line);background:var(--panel);border-radius:3px;
+  letter-spacing:.06em}
+.dias button[aria-pressed="true"]{background:var(--ink);color:var(--panel);
+  border-color:var(--ink)}
+.boton[aria-pressed="true"]{background:var(--trabajo-bg);border-color:var(--trabajo);
+  color:var(--trabajo)}
+select{font-family:var(--dato);font-size:12px;padding:6px 8px;border-radius:3px;
+  border:1px solid var(--line);background:var(--panel);color:inherit}
+.reloj{font-family:var(--dato);font-size:12.5px;color:var(--soft);margin-left:auto;
+  letter-spacing:.03em}
+.barra-dia{height:3px;background:var(--sunk);border:1px solid var(--line);
+  border-radius:2px;overflow:hidden;margin-bottom:16px}
+.barra-dia i{display:block;height:100%;background:var(--ink);width:0}
+
+.sala{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:10px}
+.ag{border:1px solid var(--line);background:var(--panel);border-radius:4px;
+  padding:12px 12px 9px;min-width:0;transition:border-color .3s,background .3s,opacity .3s}
+.ag[data-e="trabajando"]{border-color:var(--trabajo);background:var(--trabajo-bg)}
+.ag[data-e="entregado"]{border-color:var(--ok);background:var(--ok-bg)}
+.ag[data-e="bloqueado"]{border-color:var(--sello);background:var(--sello-bg)}
+.ag[data-e="libre"]{opacity:.4}
+.ag h4{font-size:13.5px;text-align:center;letter-spacing:-.01em}
+.ag .oficio{display:block;text-align:center;font-size:11px;color:var(--faint);
+  margin:1px 0 8px;font-family:var(--dato)}
+.ag .tarea{font-size:12.5px;line-height:1.42;color:var(--soft);min-height:54px}
+.ag[data-e="bloqueado"] .tarea{color:var(--sello)}
+.ag .riel{height:3px;background:var(--sunk);border-radius:2px;overflow:hidden;
+  margin-top:9px}
+.ag .riel i{display:block;height:100%;width:0;background:var(--trabajo);
+  transition:width .28s linear}
+.ag[data-e="entregado"] .riel i{background:var(--ok)}
+.ag[data-e="bloqueado"] .riel i{background:var(--sello)}
+.ag .resto{display:block;text-align:right;font-family:var(--dato);font-size:10.5px;
+  color:var(--faint);margin-top:4px;letter-spacing:.03em}
+.mu{display:block;width:58px;height:58px;margin:0 auto}
+.mu .brazo{transform-origin:17px 31px}
+.ag[data-e="trabajando"] .mu .brazo{animation:pica .62s ease-in-out infinite alternate}
+.ag[data-e="trabajando"] .mu .cabeza{animation:asiente 1.9s ease-in-out infinite}
+.ag[data-e="bloqueado"] .mu{animation:niega .46s ease-in-out infinite}
+@keyframes pica{from{transform:rotate(-17deg)}to{transform:rotate(21deg)}}
+@keyframes asiente{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+@keyframes niega{0%,100%{transform:translateX(-1.3px)}50%{transform:translateX(1.3px)}}
+@media (prefers-reduced-motion:reduce){.mu,.mu *{animation:none!important}
+  .ag .riel i{transition:none}}
+
+.relevo{margin-top:12px;border:1px solid var(--line);border-left:3px solid var(--trabajo);
+  background:var(--panel);padding:9px 12px;font-size:13.5px;min-height:20px}
+.relevo.quieto{border-left-color:var(--line);color:var(--soft)}
+
+.compuertas{margin-top:14px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.compuertas .et{font-size:12.5px;color:var(--soft);margin-right:2px}
+.llave{font-family:var(--dato);font-size:11.5px;padding:5px 9px;border-radius:3px;
+  border:1px solid var(--line);background:var(--panel);letter-spacing:.03em}
+.llave[aria-pressed="true"]{background:var(--sello-bg);border-color:var(--sello);
+  color:var(--sello)}
+.llave .pt{color:var(--faint);margin-left:5px}
+.llave[aria-pressed="true"] .pt{color:var(--sello)}
+
+/* --- tablas y fichas --------------------------------------------------- */
+.cuadro{border:1px solid var(--line);background:var(--panel);border-radius:4px;
+  padding:16px;margin-top:16px}
+.scroll{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+th{font-family:var(--dato);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);text-align:left;font-weight:500;padding:7px 10px;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+td.n{font-family:var(--dato);text-align:right;font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+tr.gana td{background:var(--ok-bg)}
+tr.veto td{background:var(--sello-bg)}
+tr.veto td:first-child b{text-decoration:line-through;text-decoration-color:var(--sello)}
+.pastilla{font-family:var(--dato);font-size:10px;letter-spacing:.08em;padding:2px 6px;
+  border-radius:2px;text-transform:uppercase;white-space:nowrap}
+.pastilla.gana{background:var(--ok);color:var(--panel)}
+.pastilla.veto{background:var(--sello);color:var(--panel)}
+.pastilla.ojo{background:var(--ojo-bg);color:var(--ojo);border:1px solid var(--ojo)}
+
+.cifras{display:grid;grid-template-columns:repeat(auto-fit,minmax(156px,1fr));gap:10px;
+  margin-top:16px}
+.cifra{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:14px}
+.cifra b{display:block;font-family:var(--display);font-weight:900;font-size:30px;
+  letter-spacing:-.025em;font-variant-numeric:tabular-nums;line-height:1.05}
+.cifra span{display:block;font-size:12.5px;color:var(--soft);margin-top:5px;line-height:1.35}
+.cifra.marca b{color:var(--sello)}
+
+.nota{border-left:3px solid var(--line);padding:8px 13px;margin-top:12px;font-size:14px;
+  color:var(--soft)}
+.nota.enmienda{border-left-color:var(--ojo);background:var(--ojo-bg);color:var(--ink)}
+.nota.condicion{border-left-color:var(--trabajo);background:var(--trabajo-bg);color:var(--ink)}
+.nota b{font-family:var(--display)}
+details{border-top:1px solid var(--line);padding:11px 0}
+summary{cursor:pointer;font-family:var(--dato);font-size:12.5px;color:var(--trabajo);
+  letter-spacing:.02em}
+details > div{margin-top:10px}
+.carga{display:grid;grid-template-columns:118px 1fr 64px;gap:8px;align-items:center;
+  font-size:13px;margin-top:7px}
+.carga .riel2{height:9px;background:var(--sunk);border:1px solid var(--line);
+  border-radius:2px;overflow:hidden}
+.carga .riel2 i{display:block;height:100%;background:var(--trabajo)}
+.carga .riel2.top i{background:var(--sello)}
+footer{margin-top:52px;border-top:1px solid var(--line);padding-top:18px;
+  font-size:13px;color:var(--faint)}
+</style>
+
+<header class="alto">
+  <div class="envoltura">
+    <span class="sello">Expediente de produccion</span>
+    <h1>La sala de Cifra&nbsp;Negra</h1>
+    <p class="pie">Once oficios, una investigación a la semana y siete
+    publicaciones de ella. Nueve de los once pueden parar el día: cada uno posee
+    una compuerta y tiene permiso para decir que hoy no sale. Esta página es el
+    mismo motor que corre en el repositorio. Ninguna cifra está escrita a mano aquí.</p>
+  </div>
+</header>
+
+<div class="envoltura">
+
+  <section id="sala">
+    <div class="titulo"><h2>La jornada, minuto a minuto</h2>
+      <span class="eyebrow" id="sal-dia-nombre"></span></div>
+    <p class="intro">Azul, trabajando. Verde, entregado. Rojo, parado por una
+    compuerta. En gris, el que hoy no entra. Cierra una compuerta abajo y mira
+    quién se queda esperando a quién.</p>
+
+    <div class="mandos">
+      <span class="dias" id="sal-dias"></span>
+      <button class="boton" id="sal-play" aria-pressed="true" type="button">Pausa</button>
+      <select id="sal-ritmo" aria-label="Velocidad">
+        <option value="620">lenta</option>
+        <option value="240" selected>normal</option>
+        <option value="95">rápida</option>
+      </select>
+      <span class="reloj" id="sal-reloj"></span>
+    </div>
+    <div class="barra-dia"><i id="sal-barra"></i></div>
+
+    <div class="sala" id="sal-grid"></div>
+    <div class="relevo quieto" id="sal-relevo"></div>
+    <div class="compuertas" id="sal-llaves"></div>
+  </section>
+
+  <section id="fallo">
+    <div class="titulo"><h2>El fallo del tribunal</h2></div>
+    <p class="intro">Tres rúbricas con pesos declarados, nota de 0 a 5 por
+    criterio y una media. El juez de riesgo tiene veto por debajo de 2,5 y lo
+    usa. Las enmiendas no las escribe nadie: saltan solas cuando la ganadora
+    baja de 3 en un criterio.</p>
+    <div class="cuadro">
+      <div class="scroll"><table id="tab-fallo"></table></div>
+      <div id="tab-notas"></div>
+      <div id="tab-rubricas"></div>
+    </div>
+  </section>
+
+  <section id="carrera">
+    <div class="titulo"><h2>La carrera contra la puerta</h2></div>
+    <p class="intro" id="car-intro"></p>
+    <div class="cifras" id="car-cifras"></div>
+    <div class="cuadro">
+      <div class="scroll"><table id="car-tabla"></table></div>
+      <div class="nota" id="car-nota"></div>
+    </div>
+  </section>
+
+  <section id="semana">
+    <div class="titulo"><h2>La semana canónica</h2></div>
+    <p class="intro" id="sem-intro"></p>
+    <div class="cuadro">
+      <div class="scroll"><table id="sem-tabla"></table></div>
+    </div>
+    <div class="cuadro">
+      <h3>Dónde se van las horas</h3>
+      <p class="intro">El cuello de botella decide qué herramienta merece la
+      pena pagar, y no al revés.</p>
+      <div id="sem-carga"></div>
+    </div>
+  </section>
+
+  <section id="pila">
+    <div class="titulo"><h2>Herramientas</h2>
+      <select id="pil-presupuesto" aria-label="Presupuesto"></select></div>
+    <p class="intro" id="pil-intro"></p>
+    <div class="cuadro">
+      <div class="scroll"><table id="pil-tabla"></table></div>
+      <div class="nota" id="pil-nota"></div>
+    </div>
+  </section>
+
+  <section id="calendario">
+    <div class="titulo"><h2>Las cinco primeras semanas</h2></div>
+    <p class="intro">La semana 0 produce y no publica. Sin ese colchón, la
+    cadencia diaria depende de que a una persona no le pase nada siete días
+    seguidos.</p>
+    <div class="cuadro">
+      <div class="scroll"><table id="cal-tabla"></table></div>
+    </div>
+  </section>
+
+  <footer id="pie"></footer>
+</div>
+
+<script id="datos" type="application/json">__DATOS__</script>
+<script>
+(function(){
+"use strict";
+var D = JSON.parse(document.getElementById("datos").textContent);
+var $ = function(s){ return document.querySelector(s); };
+function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function num(n, d){ return Number(n).toLocaleString("es-ES", d ? {minimumFractionDigits:d, maximumFractionDigits:d} : undefined); }
+function hhmm(min){ return ("0"+Math.floor(min/60)).slice(-2)+":"+("0"+(min%60)).slice(-2); }
+
+/* ---- munequitos ------------------------------------------------------- */
+var PROPS = {
+  lupa:'<circle cx="43" cy="21" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="47.5" y1="25.5" x2="53" y2="31" stroke="currentColor" stroke-width="2.2"/>',
+  archivo:'<rect x="37" y="15" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="37" y1="20" x2="52" y2="20" stroke="currentColor" stroke-width="2.2"/>',
+  calculadora:'<rect x="38" y="13" width="13" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="40.5" y="15.5" width="8" height="3.5" fill="currentColor" opacity=".45"/><circle cx="42" cy="23" r="1.2" fill="currentColor"/><circle cx="47" cy="23" r="1.2" fill="currentColor"/><circle cx="42" cy="27.5" r="1.2" fill="currentColor"/><circle cx="47" cy="27.5" r="1.2" fill="currentColor"/>',
+  balanza:'<line x1="44" y1="12" x2="44" y2="31" stroke="currentColor" stroke-width="2.2"/><line x1="36" y1="17" x2="52" y2="17" stroke="currentColor" stroke-width="2.2"/><path d="M36 17 l-3 7 h6 z" fill="currentColor"/><path d="M52 17 l-3 7 h6 z" fill="currentColor"/>',
+  pluma:'<line x1="37" y1="31" x2="50" y2="14" stroke="currentColor" stroke-width="2.2"/><path d="M37 31 l1.2 -5.2 l3.6 2.1 z" fill="currentColor"/>',
+  microfono:'<rect x="40" y="12" width="7" height="13" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="43.5" y1="25" x2="43.5" y2="30" stroke="currentColor" stroke-width="2.2"/><line x1="39" y1="30" x2="48" y2="30" stroke="currentColor" stroke-width="2.2"/>',
+  tijeras:'<line x1="38" y1="13" x2="49" y2="27" stroke="currentColor" stroke-width="2.2"/><line x1="49" y1="13" x2="38" y2="27" stroke="currentColor" stroke-width="2.2"/><circle cx="37" cy="29.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="50" cy="29.5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+  trozos:'<rect x="36" y="13" width="7" height="7" rx="1" fill="currentColor"/><rect x="45" y="18" width="7" height="7" rx="1" fill="currentColor" opacity=".62"/><rect x="38" y="24" width="7" height="7" rx="1" fill="currentColor" opacity=".38"/>',
+  marco:'<rect x="36" y="15" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="39.5" y="18.5" width="8" height="7" fill="currentColor" opacity=".45"/>',
+  calendario:'<rect x="36" y="15" width="15" height="14" rx="1.5" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="36" y1="20" x2="51" y2="20" stroke="currentColor" stroke-width="2.2"/><circle cx="41" cy="24.5" r="1.3" fill="currentColor"/><circle cx="46" cy="24.5" r="1.3" fill="currentColor"/>',
+  grafico:'<rect x="37" y="23" width="4" height="8" fill="currentColor" opacity=".5"/><rect x="43" y="18" width="4" height="13" fill="currentColor" opacity=".75"/><rect x="49" y="13" width="4" height="18" fill="currentColor"/>'
+};
+function munequito(a){
+  return '<svg class="mu" viewBox="0 0 58 44" style="color:'+a.color+'" aria-hidden="true">'+
+    '<path d="M6 44 V32 a10 10 0 0 1 20 0 V44 Z" fill="'+a.color+'" opacity=".5"/>'+
+    '<g class="brazo"><rect x="16" y="29.4" width="18" height="3.6" rx="1.8" fill="'+a.color+'"/></g>'+
+    '<g class="cabeza"><circle cx="17" cy="14" r="6.6" fill="'+a.color+'"/></g>'+
+    (PROPS[a.figura]||"")+"</svg>";
+}
+
+/* ---- la sala ---------------------------------------------------------- */
+var GATES = D.compuertas.duenos;
+var POR_CLAVE = {};
+D.agentes.forEach(function(a){ POR_CLAVE[a.clave] = a; });
+
+var INICIALES = {lunes:"L", martes:"M", miercoles:"X", jueves:"J",
+                 viernes:"V", sabado:"S", domingo:"D"};
+var S = {dia:0, cuadro:0, ms:240, corriendo:true, timer:null, cerradas:{}};
+
+function diaActual(){ return D.dias[S.dia]; }
+
+function bloqueoDelDia(){
+  // La compuerta cerrada para al agente que la posee desde que entra su turno,
+  // y todo el que entra despues se queda esperandole. Los turnos de un dia no
+  // se solapan, asi que la cadena es la del reloj.
+  var peli = diaActual(), parado = null;
+  peli.agentes.forEach(function(a){
+    var suyas = (POR_CLAVE[a.clave].compuertas || []).filter(function(c){ return S.cerradas[c]; });
+    if (suyas.length && a.inicio >= 0 && (!parado || a.inicio < parado.inicio)){
+      parado = {clave:a.clave, inicio:a.inicio, compuerta:suyas[0], nombre:a.nombre};
+    }
+  });
+  return parado;
+}
+
+function pinta(){
+  var peli = diaActual();
+  var f = peli.fotogramas[Math.min(S.cuadro, peli.fotogramas.length - 1)];
+  var parado = bloqueoDelDia();
+  var h = "";
+
+  peli.agentes.forEach(function(a, i){
+    var e = f.estados[i], estado = e.e, texto = a.tarea, resto = "";
+    if (parado && a.inicio >= 0 && f.minuto >= parado.inicio){
+      if (a.clave === parado.clave){
+        estado = "bloqueado";
+        texto = "Parado: la compuerta «" + parado.compuerta + "» no pasa.";
+      } else if (a.inicio > parado.inicio){
+        estado = "esperando";
+        texto = "Esperando a " + parado.nombre + ": sin su entrega no hay nada que hacer.";
+      }
+    }
+    if (estado === "trabajando") resto = "quedan " + e.r + " min";
+    else if (estado === "esperando") resto = e.r ? "entra en " + e.r + " min" : "parado";
+    else if (estado === "entregado") resto = "entregado";
+    else if (estado === "bloqueado") resto = "no sale";
+    else resto = "hoy no le toca";
+
+    var ancho = estado === "esperando" ? 0 : Math.round(e.p * 100);
+    h += '<article class="ag" data-e="' + estado + '">' + munequito(a) +
+      "<h4>" + esc(a.nombre) + '</h4><span class="oficio">' + esc(a.rol) + "</span>" +
+      '<p class="tarea">' + esc(texto) + "</p>" +
+      '<div class="riel"><i style="width:' + ancho + '%"></i></div>' +
+      '<span class="resto">' + resto + "</span></article>";
+  });
+  $("#sal-grid").innerHTML = h;
+
+  $("#sal-reloj").textContent = "minuto " + f.minuto + " de " + peli.jornada +
+    " · publica a las " + hhmm(peli.dia.hora);
+  $("#sal-dia-nombre").textContent = peli.dia.nombre + " · " + peli.dia.formato +
+    " · " + peli.dia.tipo;
+  $("#sal-barra").style.width = Math.round(f.minuto / peli.jornada * 100) + "%";
+
+  var caja = $("#sal-relevo");
+  if (parado && f.minuto >= parado.inicio){
+    caja.className = "relevo";
+    caja.innerHTML = "<b>" + esc(parado.nombre) + "</b> no pasa la compuerta «" +
+      esc(parado.compuerta) + "». El día se para aquí: lo que viene detrás no " +
+      "tiene con qué trabajar.";
+  } else if (f.relevo){
+    caja.className = "relevo";
+    caja.innerHTML = "Relevo · <b>" + esc(POR_CLAVE[f.relevo.de].nombre) +
+      "</b> entrega «" + esc(f.relevo.entrega) + "» a <b>" +
+      esc(POR_CLAVE[f.relevo.a].nombre) + "</b>";
+  } else {
+    caja.className = "relevo quieto";
+    caja.textContent = f.resumen;
+  }
+}
+
+function pintaLlaves(){
+  var peli = diaActual(), h = '<span class="et">Hoy pueden parar el día:</span>';
+  peli.agentes.forEach(function(a){
+    if (a.inicio < 0) return;
+    (POR_CLAVE[a.clave].compuertas || []).forEach(function(c){
+      h += '<button class="llave" type="button" data-c="' + c + '" aria-pressed="' +
+        (S.cerradas[c] ? "true" : "false") + '">' + esc(c) +
+        '<span class="pt">' + esc(a.nombre.split(" ")[0]) + "</span></button>";
+    });
+  });
+  h += '<span class="et">' + (Object.keys(S.cerradas).length ?
+    "Toca otra vez para abrirla." : "Toca una para cerrarla.") + "</span>";
+  $("#sal-llaves").innerHTML = h;
+}
+
+function pintaDias(){
+  var h = "";
+  D.dias.forEach(function(p, i){
+    h += '<button type="button" data-d="' + i + '" aria-pressed="' +
+      (i === S.dia ? "true" : "false") + '">' + INICIALES[p.dia.nombre] + "</button>";
+  });
+  $("#sal-dias").innerHTML = h;
+}
+
+function tic(){
+  if (!S.corriendo) return;
+  S.cuadro += 1;
+  if (S.cuadro >= diaActual().fotogramas.length){
+    S.cuadro = 0;
+    S.dia = (S.dia + 1) % D.dias.length;
+    pintaDias(); pintaLlaves();
+  }
+  pinta();
+}
+function ritmo(ms){
+  S.ms = ms;
+  if (S.timer) clearInterval(S.timer);
+  S.timer = setInterval(tic, ms);
+}
+function marcha(correr){
+  S.corriendo = correr;
+  $("#sal-play").setAttribute("aria-pressed", String(correr));
+  $("#sal-play").textContent = correr ? "Pausa" : "Seguir";
+}
+
+$("#sal-dias").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-d]");
+  if (!b) return;
+  S.dia = Number(b.getAttribute("data-d"));
+  S.cuadro = 0;
+  pintaDias(); pintaLlaves(); pinta();
+});
+$("#sal-llaves").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-c]");
+  if (!b) return;
+  var c = b.getAttribute("data-c");
+  if (S.cerradas[c]) delete S.cerradas[c]; else S.cerradas[c] = true;
+  pintaLlaves(); pinta();
+});
+$("#sal-play").addEventListener("click", function(){ marcha(!S.corriendo); });
+$("#sal-ritmo").addEventListener("change", function(){ ritmo(Number(this.value) || 240); });
+
+/* ---- el fallo --------------------------------------------------------- */
+(function(){
+  var h = "<thead><tr><th>Estrategia</th><th>Cadencia</th>";
+  D.jueces.forEach(function(j){ h += "<th>" + esc(j.nombre) + "</th>"; });
+  h += "<th>Media</th></tr></thead><tbody>";
+  D.tabla.forEach(function(f){
+    var clase = f.ganadora ? "gana" : (f.vetada ? "veto" : "");
+    h += '<tr class="' + clase + '"><td><b>' + esc(f.nombre) + "</b><br><span class='m' " +
+      "style='font-size:11.5px;color:var(--faint)'>" + esc(f.resumen.slice(0, 120)) +
+      "…</span></td><td>" + esc(f.cadencia) + "</td>";
+    D.jueces.forEach(function(j){ h += '<td class="n">' + num(f[j.clave], 2) + "</td>"; });
+    h += '<td class="n"><b>' + num(f.media, 2) + "</b>" +
+      (f.ganadora ? ' <span class="pastilla gana">gana</span>' : "") +
+      (f.vetada ? ' <span class="pastilla veto">veto</span>' : "") + "</td></tr>";
+  });
+  $("#tab-fallo").innerHTML = h + "</tbody>";
+
+  var n = '<div class="nota"><b>' + esc(D.fallo.resumen) + "</b></div>";
+  D.fallo.enmiendas.forEach(function(e){
+    n += '<div class="nota enmienda"><b>Enmienda de ' + esc(e.juez) + "</b> · " +
+      esc(e.criterio) + " " + e.nota + "/5 — " + esc(e.enmienda) + "</div>";
+  });
+  D.fallo.condiciones.forEach(function(c){
+    n += '<div class="nota condicion"><b>Condición</b> — ' + esc(c) + "</div>";
+  });
+  $("#tab-notas").innerHTML = n;
+
+  var r = "";
+  D.jueces.forEach(function(j){
+    var punto = D.fallo.puntuaciones.filter(function(p){
+      return p.juez === j.clave && p.estrategia === D.fallo.ganadora; })[0];
+    r += "<details><summary>" + esc(j.nombre + " · " + j.oficio) +
+      " — rúbrica y notas de la ganadora</summary><div>" +
+      '<p class="intro">' + esc(j.mira) +
+      (j.veto ? " <b>Veto por debajo de " + num(j.veto, 1) + ".</b>" : "") + "</p>" +
+      '<div class="scroll"><table><thead><tr><th>Criterio</th><th>Peso</th>' +
+      "<th>Nota</th><th>Por qué</th></tr></thead><tbody>";
+    punto.desglose.forEach(function(x){
+      r += "<tr><td>" + esc(x.pregunta) + '</td><td class="n">' +
+        Math.round(x.peso * 100) + '%</td><td class="n">' + x.nota + "/5</td><td>" +
+        esc(x.porque) + (x.enmienda ? ' <span class="pastilla ojo">enmienda</span>' : "") +
+        "</td></tr>";
+    });
+    r += "</tbody></table></div></div></details>";
+  });
+  $("#tab-rubricas").innerHTML = r;
+})();
+
+/* ---- la carrera ------------------------------------------------------- */
+(function(){
+  var c = D.carrera, r = D.rutas;
+  $("#car-intro").textContent = "El 01-02-2027 el listón de entrada al Programa de " +
+    "Socios sube de " + num(4000) + " a " + num(8000) + " horas de visualización en " +
+    "365 días, y de 10 a 20 millones de vistas de Shorts en 90 días. Quien ya está " +
+    "dentro no se ve afectado, así que la fecha no es un detalle: es el plazo.";
+
+  var cifras = [
+    [num(c.dias_hasta_el_cambio), "días hasta que sube el listón", true],
+    [num(c.vistas_necesarias), "vistas de documental para cruzar la puerta", false],
+    [num(c.minutos_por_vista, 1), "minutos vistos por vista, a 22 min y 45%", false],
+    [num(r.veces_mas_vistas, 1) + "×", "más vistas pide la ruta de Shorts", true]
+  ];
+  $("#car-cifras").innerHTML = cifras.map(function(x){
+    return '<div class="cifra' + (x[2] ? " marca" : "") + '"><b>' + x[0] +
+      "</b><span>" + x[1] + "</span></div>";
+  }).join("");
+
+  var h = "<thead><tr><th>Ruta a la misma puerta</th><th>Vistas</th>" +
+    "<th>Publicidad que dejan</th><th>RPM</th></tr></thead><tbody>";
+  [["Documentales · horas de visualización", r.ruta_horas],
+   ["Shorts · vistas en 90 días", r.ruta_shorts]].forEach(function(p){
+    h += "<tr><td>" + p[0] + '</td><td class="n">' + num(p[1].vistas) +
+      '</td><td class="n">' + num(p[1].ingreso[0]) + "–" + num(p[1].ingreso[1]) +
+      ' $</td><td class="n">' + num(p[1].rpm[0], 2) + "–" + num(p[1].rpm[1], 2) + "</td></tr>";
+  });
+  $("#car-tabla").innerHTML = h + "</tbody>";
+  $("#car-nota").innerHTML = "<b>" + esc(c.veredicto) + "</b> Los RPM son " +
+    esc(r.fuente_rpm) + ", y la hipótesis de vistas por documental la pone quien " +
+    "la asume: hasta que haya tres meses de datos propios, esto es una ecuación y " +
+    "no una previsión.";
+})();
+
+/* ---- la semana -------------------------------------------------------- */
+(function(){
+  $("#sem-intro").textContent = D.plan.resumen;
+  var h = "<thead><tr><th>Día</th><th>Hora</th><th>Formato</th><th>Ángulo</th>" +
+    "<th>Trabajo</th><th>Lo que se publica</th></tr></thead><tbody>";
+  D.plan.dias.forEach(function(d){
+    h += "<tr><td>" + esc(d.nombre) + '</td><td class="n">' + hhmm(d.hora) +
+      "</td><td>" + esc(d.formato) + "</td><td>" + esc(d.tipo) + '</td><td class="n">' +
+      d.minutos + " min</td><td>" + esc(d.titulo) + "</td></tr>";
+  });
+  $("#sem-tabla").innerHTML = h + "</tbody>";
+
+  var carga = D.plan.carga, tope = Math.max.apply(null, Object.keys(carga).map(function(k){ return carga[k]; }));
+  $("#sem-carga").innerHTML = Object.keys(carga).map(function(k){
+    return '<div class="carga"><span>' + esc(POR_CLAVE[k].nombre) + "</span>" +
+      '<span class="riel2' + (carga[k] === tope ? " top" : "") + '"><i style="width:' +
+      Math.round(carga[k] / tope * 100) + '%"></i></span>' +
+      '<span class="m" style="text-align:right">' + carga[k] + " min</span></div>";
+  }).join("");
+})();
+
+/* ---- la pila ---------------------------------------------------------- */
+function pintaPila(clave){
+  var p = D.pilas[clave];
+  $("#pil-intro").textContent = p.resumen;
+  var h = "<thead><tr><th>Herramienta</th><th>Oficio</th><th>€/mes</th>" +
+    "<th>Quita</th><th>Para qué</th></tr></thead><tbody>";
+  function fila(x, dentro){
+    var coste = x.coste_mes === null ? "sin verificar"
+      : (x.coste_mes ? num(x.coste_mes, 2) : "gratis");
+    return "<tr" + (dentro ? "" : ' style="opacity:.55"') + "><td><b>" + esc(x.nombre) +
+      "</b></td><td>" + esc(x.oficio) + '</td><td class="n">' + coste +
+      '</td><td class="n">' + (x.minutos ? x.minutos + " min" : "—") + "</td><td>" +
+      esc(x.nota) + (x.riesgo ? "<br><b style='color:var(--sello)'>Riesgo:</b> " +
+      esc(x.riesgo) : "") + "</td></tr>";
+  }
+  p.elegidas.forEach(function(x){ h += fila(x, true); });
+  p.sin_precio.forEach(function(x){ h += fila(x, false); });
+  p.descartadas.forEach(function(x){ h += fila(x, false); });
+  $("#pil-tabla").innerHTML = h + "</tbody>";
+  $("#pil-nota").innerHTML = "La semana pasa de <b>" + num(p.horas_sin_herramientas, 1) +
+    "</b> a <b>" + num(p.horas_semana, 1) + " horas</b>. Los minutos que dice que " +
+    "quita cada herramienta son hipótesis declaradas, no mediciones: la primera vez " +
+    "que se cronometre un montaje, se corrigen. Lo que sale en gris no cuenta — o " +
+    "no entra en el presupuesto, o su precio no está verificado.";
+}
+(function(){
+  var sel = $("#pil-presupuesto");
+  sel.innerHTML = Object.keys(D.pilas).sort(function(a,b){ return a-b; }).map(function(k){
+    return '<option value="' + k + '"' + (k === "25" ? " selected" : "") + ">" +
+      (k === "0" ? "solo gratis" : k + " €/mes") + "</option>";
+  }).join("");
+  sel.addEventListener("change", function(){ pintaPila(this.value); });
+  pintaPila("25");
+})();
+
+/* ---- calendario ------------------------------------------------------- */
+(function(){
+  var h = "<thead><tr><th>Fecha</th><th>Día</th><th>Semana</th><th>Hora</th>" +
+    "<th>Formato</th><th>Qué se publica</th></tr></thead><tbody>";
+  D.calendario.forEach(function(e){
+    if (!e.publica){
+      h += '<tr style="opacity:.55"><td class="m">' + e.fecha + "</td><td>" +
+        esc(e.dia_semana) + '</td><td class="n">0</td><td class="n">—</td>' +
+        "<td>reserva</td><td>" + esc(e.nota) + "</td></tr>";
+      return;
+    }
+    h += '<tr><td class="m">' + e.fecha + "</td><td>" + esc(e.dia_semana) +
+      '</td><td class="n">' + e.semana + '</td><td class="n">' + hhmm(e.hora) +
+      "</td><td>" + esc(e.formato) + " · " + esc(e.tipo) + "</td><td>" +
+      esc(e.titulo) + "</td></tr>";
+  });
+  $("#cal-tabla").innerHTML = h + "</tbody>";
+})();
+
+$("#pie").innerHTML = "Generado el " + D.generado + " desde el módulo " +
+  "<span class='m'>estudio/</span> del repositorio: " + D.agentes.length +
+  " agentes, " + D.compuertas.total + " compuertas —" + D.compuertas.humanas.length +
+  " de ellas con juicio humano detrás— y " + D.fallo.puntuaciones.length +
+  " puntuaciones de tres rúbricas. Ninguna cifra de esta página está escrita a mano.";
+
+pintaDias();
+pintaLlaves();
+pinta();
+ritmo(S.ms);
+})();
+</script>
