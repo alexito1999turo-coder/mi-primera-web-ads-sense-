@@ -36,6 +36,7 @@ abuse*: la restricción de riesgo y la ventaja de producto son la misma decisió
 | **M3** | `insight/` | Oportunidad descontada por AI Overviews y reasignación de clusters |
 | **M7a** | `citability/` | Qué frases puede citar un buscador, y qué le falta a las demás |
 | **M6a** | `dataset/` | Datos propios con procedencia: el activo enlazable que sustituye a la red de enlaces |
+| **M13** | `estudio/` | El mismo motor aplicado a vídeo: once agentes con compuerta, semana canónica, tribunal de tres rúbricas y la carrera contra el listón de YouTube |
 
 ## Las tres cosas que la competencia no hace
 
@@ -118,10 +119,14 @@ python3 -m webapp
 # → http://127.0.0.1:8000
 ```
 
-Cuatro herramientas en el navegador, sin instalar nada y sin enviar datos a
+Siete pestañas en el navegador, sin instalar nada y sin enviar datos a
 ningún sitio: **auditoría** de un dominio en vivo con barra de progreso,
 **citabilidad** de un texto, **oportunidad** desde una exportación de Search
-Console y **plan de clusters** desde un CSV de keywords.
+Console, **plan de clusters** desde un CSV de keywords, **memoria** por sitio,
+**negocio** con el coste por página y el **estudio** del canal, donde los once
+agentes se ven trabajando turno a turno: azul el que produce, verde el que ya
+entregó y rojo el que está parado por una compuerta, con el motivo escrito y el
+nombre de quien la posee.
 
 Hasta aquí esto eran diez paquetes y una batería de pruebas: un motor, no un
 producto. Su producto se usa sin tocar código; el mío no se podía usar. Esta es
@@ -131,6 +136,54 @@ Se ata a `127.0.0.1` a propósito, y rechaza auditar direcciones internas
 (`192.168.*`, `10.*`, `localhost`, el endpoint de metadatos) salvo que pases
 `--allow-private`. Sin ese guardia, la herramienta sería un escáner de la red
 de quien la levanta.
+
+## El estudio: las compuertas aplicadas a vídeo
+
+El encargo era un canal de YouTube con publicación **diaria** y monetización.
+Las dos mitades se contradicen, y el módulo existe porque la contradicción se
+puede medir en vez de discutirla.
+
+**El dato que ordena todo.** El 01-02-2027 el listón de entrada al Programa de
+Socios pasa de 4.000 a 8.000 horas de visualización en 365 días, y de 10 a 20
+millones de vistas de Shorts en 90 días; quien ya está dentro no se ve afectado.
+Y 4.000 horas son 240.000 minutos: un documental de 22 minutos al 45% de
+retención deja 9,9 minutos por vista, así que la ruta de horas se cierra con
+**24.243 vistas** y la de Shorts con **diez millones**. Cuatrocientas doce veces
+más vistas por la misma puerta, y pagadas a un RPM entre treinta y cien veces
+menor. De ahí sale la arquitectura entera: el Short es el tráiler, el documental
+es el producto, y la métrica del canal son los minutos vistos por publicación.
+
+**Tres estrategias, tres jueces, un veto.** `jueces.py` no escribe la conclusión:
+la calcula. Tres rúbricas con pesos declarados puntúan de 0 a 5, el juez de
+riesgo tiene veto por debajo de 2,5 —y lo usa, contra la estrategia de volumen
+automatizado— y las enmiendas se activan solas cuando la ganadora saca menos de
+3 en un criterio. Dos de los tres jueces preferían la estrategia prudente y gana
+la compuesta por agregado: **el fallo dice la discrepancia en vez de esconderla.**
+
+**La semana canónica.** Una investigación, siete publicaciones: dos largos y
+cinco Shorts de cinco ángulos distintos. Son **19,1 horas semanales**, sumadas
+turno a turno y no estimadas a ojo, y el cuello de botella es el guionista con
+300 minutos — que es lo que decide qué herramienta merece la pena pagar, y no al
+contrario.
+
+**La compuerta que hace que esto no sea una granja.** Siete publicaciones diarias
+de la misma investigación es exactamente el patrón que la política de contenido
+no auténtico de YouTube persigue desde el 15-07-2025. Por eso la variación es
+una compuerta que bloquea —similitud de guiones medida con los mismos *shingles*
+que `compliance/fingerprint.py`, y ningún par de ángulos iguales seguidos— y hay
+una prueba que comprueba que **la semana que se vende pasa la compuerta que se
+vende con ella**, sin retocar nada a mano.
+
+De las once compuertas, ocho dan su veredicto sobre datos que escribe una
+persona y tres son irreductiblemente humanas: saturación del caso, difamación y
+licencias de archivo. El parte las cuenta por separado en vez de presentarlas
+todas como automáticas.
+
+```bash
+python3 -m estudio                      # fallo, semana, carrera y pila
+python3 -m estudio --animar 5           # la sala moviéndose en el terminal
+python3 -m estudio --calendario 4
+```
 
 ## Uso por línea de comandos
 
