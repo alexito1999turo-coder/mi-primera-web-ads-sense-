@@ -85,6 +85,21 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/salud":
             self._json(200, {"ok": True, "version": "0.1.0"})
             return
+        if path == "/api/estudio":
+            params = parse_qs(urlparse(self.path).query)
+            self._json(200, api.estudio(
+                presupuesto=(params.get("presupuesto") or ["0"])[0],
+                vistas=(params.get("vistas") or ["0"])[0],
+                hoy=(params.get("hoy") or [""])[0],
+            ))
+            return
+        if path == "/api/estudio/pelicula":
+            params = parse_qs(urlparse(self.path).query)
+            self._json(200, api.estudio_pelicula(
+                dia=(params.get("dia") or ["1"])[0],
+                paso=(params.get("paso") or ["5"])[0],
+            ))
+            return
         if path == "/api/memoria":
             params = parse_qs(urlparse(self.path).query)
             cliente = api.normalize_client((params.get("cliente") or [""])[0])

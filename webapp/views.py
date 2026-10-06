@@ -163,6 +163,56 @@ pre{background:var(--ground);border:1px solid var(--edge);border-radius:6px;
 td.n b{font-weight:700}
 #tar-planes input{margin:0}
 #tar-planes td{padding:4px 6px}
+
+/* --- 7. la sala -------------------------------------------------------- */
+.sala{display:grid;grid-template-columns:repeat(auto-fill,minmax(166px,1fr));gap:9px}
+.ag{border:1px solid var(--edge);border-radius:8px;padding:9px 9px 7px;
+  background:var(--panel);transition:border-color .25s,background .25s,opacity .25s}
+.ag[data-estado="trabajando"]{border-color:var(--signal);background:var(--signal-bg)}
+.ag[data-estado="entregado"]{border-color:var(--good);background:var(--good-bg)}
+.ag[data-estado="bloqueado"]{border-color:var(--bad);background:var(--bad-bg)}
+.ag[data-estado="libre"]{opacity:.42}
+.ag h4{margin:0 0 1px;font-size:12.5px;text-align:center}
+.ag .ofi{font-size:10.5px;color:var(--faint);text-align:center;display:block;
+  margin-bottom:5px}
+.ag .que{font-size:11px;color:var(--soft);line-height:1.35;min-height:44px}
+.ag[data-estado="bloqueado"] .que{color:var(--bad)}
+.ag .pg{height:4px;background:var(--ground);border-radius:3px;overflow:hidden;
+  margin-top:6px;border:1px solid var(--edge)}
+.ag .pg i{display:block;height:100%;width:0;background:var(--signal);
+  transition:width .3s linear}
+.ag[data-estado="entregado"] .pg i{background:var(--good)}
+.ag[data-estado="bloqueado"] .pg i{background:var(--bad)}
+.ag .reloj{font-family:var(--mono);font-size:10.5px;color:var(--faint);
+  display:block;text-align:right;margin-top:3px}
+.mu{width:50px;height:50px;display:block;margin:0 auto 2px}
+.mu .brazo{transform-origin:16px 29px}
+.ag[data-estado="trabajando"] .mu .brazo{animation:pica .62s ease-in-out infinite alternate}
+.ag[data-estado="trabajando"] .mu .cabeza{animation:asiente 1.9s ease-in-out infinite}
+.ag[data-estado="bloqueado"] .mu{animation:niega .5s ease-in-out infinite}
+.ag[data-estado="esperando"] .mu{opacity:.72}
+@keyframes pica{from{transform:rotate(-16deg)}to{transform:rotate(20deg)}}
+@keyframes asiente{0%,100%{transform:translateY(0)}50%{transform:translateY(1.4px)}}
+@keyframes niega{0%,100%{transform:translateX(-1.2px)}50%{transform:translateX(1.2px)}}
+.mandos{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.mandos button{font:inherit;font-size:12px;cursor:pointer;padding:5px 9px;
+  border:1px solid var(--edge);border-radius:6px;background:var(--panel);
+  color:var(--ink)}
+.mandos button[aria-pressed="true"]{background:var(--signal-bg);
+  border-color:var(--signal);color:var(--signal)}
+.mandos .hora{font-family:var(--mono);font-size:12px;color:var(--soft);
+  margin-left:auto}
+.relevo{font-size:12px;color:var(--signal);background:var(--signal-bg);
+  border:1px solid var(--edge);border-radius:6px;padding:6px 9px;margin-top:9px}
+.relevo.vacio{color:var(--soft);background:var(--ground)}
+tr.gana td{background:var(--good-bg)}
+tr.vetada td{background:var(--bad-bg);text-decoration:line-through}
+tr.vetada td:last-child{text-decoration:none}
+.enm{border-left:3px solid var(--warn);padding:6px 10px;margin:7px 0;
+  background:var(--warn-bg);font-size:13px}
+.cond{border-left:3px solid var(--signal);padding:6px 10px;margin:7px 0;
+  background:var(--signal-bg);font-size:13px}
+@media (prefers-reduced-motion:reduce){.mu *,.mu{animation:none!important}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 """
 
@@ -175,6 +225,12 @@ function sp(n){ return Number(n).toLocaleString("es-ES"); }
 async function post(ruta, cuerpo){
   var r = await fetch(ruta, {method:"POST", headers:{"Content-Type":"application/json"},
                             body: JSON.stringify(cuerpo)});
+  var d = await r.json().catch(function(){ return {error:"Respuesta ilegible del servidor."}; });
+  if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
+  return d;
+}
+async function pedir(ruta){
+  var r = await fetch(ruta);
   var d = await r.json().catch(function(){ return {error:"Respuesta ilegible del servidor."}; });
   if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
   return d;
@@ -864,9 +920,342 @@ function pintarInforme(r){
   $("#inf-out").innerHTML = h;
 }
 
+
+/* --- 7. el estudio del canal ------------------------------------------ */
+var PROPS = {
+  lupa: '<circle cx="37" cy="19" r="5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<line x1="41" y1="23" x2="45" y2="27" stroke="currentColor" stroke-width="2"/>',
+  archivo: '<rect x="32" y="14" width="12" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+           '<line x1="32" y1="18" x2="44" y2="18" stroke="currentColor" stroke-width="2"/>',
+  calculadora: '<rect x="33" y="13" width="11" height="15" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    '<rect x="35" y="15" width="7" height="3" fill="currentColor" opacity=".5"/>' +
+    '<circle cx="36.5" cy="21.5" r="1" fill="currentColor"/><circle cx="40.5" cy="21.5" r="1" fill="currentColor"/>' +
+    '<circle cx="36.5" cy="25" r="1" fill="currentColor"/><circle cx="40.5" cy="25" r="1" fill="currentColor"/>',
+  balanza: '<line x1="38" y1="12" x2="38" y2="27" stroke="currentColor" stroke-width="2"/>' +
+    '<line x1="31" y1="16" x2="45" y2="16" stroke="currentColor" stroke-width="2"/>' +
+    '<path d="M31 16 l-2.5 6 h5 z" fill="currentColor"/><path d="M45 16 l-2.5 6 h5 z" fill="currentColor"/>',
+  pluma: '<line x1="32" y1="28" x2="43" y2="14" stroke="currentColor" stroke-width="2"/>' +
+         '<path d="M32 28 l1 -4.5 l3 1.8 z" fill="currentColor"/>',
+  microfono: '<rect x="35" y="12" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    '<line x1="38" y1="23" x2="38" y2="27" stroke="currentColor" stroke-width="2"/>' +
+    '<line x1="34" y1="27" x2="42" y2="27" stroke="currentColor" stroke-width="2"/>',
+  tijeras: '<line x1="33" y1="13" x2="42" y2="24" stroke="currentColor" stroke-width="2"/>' +
+    '<line x1="42" y1="13" x2="33" y2="24" stroke="currentColor" stroke-width="2"/>' +
+    '<circle cx="32" cy="26" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
+    '<circle cx="43" cy="26" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  trozos: '<rect x="31" y="13" width="6" height="6" rx="1" fill="currentColor"/>' +
+    '<rect x="39" y="17" width="6" height="6" rx="1" fill="currentColor" opacity=".65"/>' +
+    '<rect x="33" y="22" width="6" height="6" rx="1" fill="currentColor" opacity=".4"/>',
+  marco: '<rect x="31" y="14" width="13" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    '<rect x="34" y="17" width="7" height="6" fill="currentColor" opacity=".45"/>',
+  calendario: '<rect x="31" y="14" width="13" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    '<line x1="31" y1="18" x2="44" y2="18" stroke="currentColor" stroke-width="2"/>' +
+    '<circle cx="35" cy="22" r="1.1" fill="currentColor"/><circle cx="39.5" cy="22" r="1.1" fill="currentColor"/>',
+  grafico: '<rect x="32" y="21" width="3.4" height="7" fill="currentColor" opacity=".55"/>' +
+    '<rect x="37" y="17" width="3.4" height="11" fill="currentColor" opacity=".8"/>' +
+    '<rect x="42" y="13" width="3.4" height="15" fill="currentColor"/>'
+};
+
+function munequito(a){
+  return '<svg class="mu" viewBox="0 0 48 48" style="color:' + a.color + '" aria-hidden="true">' +
+    '<path d="M7 42 V30 a9 9 0 0 1 18 0 V42 Z" fill="' + a.color + '" opacity=".55"/>' +
+    '<g class="brazo"><rect x="15" y="27.3" width="15" height="3.4" rx="1.7" fill="' + a.color + '"/></g>' +
+    '<g class="cabeza"><circle cx="16" cy="13" r="6" fill="' + a.color + '"/></g>' +
+    (PROPS[a.figura] || "") + "</svg>";
+}
+
+function etiquetaReloj(e){
+  if (e.e === "trabajando") return "quedan " + e.r + " min";
+  if (e.e === "esperando") return "entra en " + e.r + " min";
+  if (e.e === "entregado") return "entregado";
+  if (e.e === "bloqueado") return "parado";
+  return "libre";
+}
+
+var SALA = {dia:1, cuadro:0, ms:240, corriendo:false, visible:false,
+            timer:null, pelis:{}, peli:null, pidiendo:false};
+var PASO = 5;
+
+function pintarFotograma(){
+  var peli = SALA.peli;
+  if (!peli) return;
+  var f = peli.fotogramas[Math.min(SALA.cuadro, peli.fotogramas.length - 1)];
+  var h = "";
+  peli.agentes.forEach(function(a, i){
+    var e = f.estados[i];
+    var texto = (e.e === "bloqueado" && a.motivo) ? a.motivo : a.tarea;
+    h += '<div class="ag" data-estado="' + e.e + '" title="' +
+      esc(a.responsable_de) + '">' + munequito(a) +
+      "<h4>" + esc(a.nombre) + '</h4><span class="ofi">' + esc(a.rol) + "</span>" +
+      '<div class="que">' + esc(texto) + "</div>" +
+      '<div class="pg"><i style="width:' + Math.round(e.p * 100) + '%"></i></div>' +
+      '<span class="reloj">' + etiquetaReloj(e) + "</span></div>";
+  });
+  $("#sal-grid").innerHTML = h;
+
+  var hora = ("0" + Math.floor(peli.dia.hora / 60)).slice(-2) + ":" +
+             ("0" + (peli.dia.hora % 60)).slice(-2);
+  $("#sal-hora").textContent = peli.dia.nombre + " · minuto " + f.minuto +
+    " de " + peli.jornada + " · publica a las " + hora;
+
+  if (f.relevo){
+    $("#sal-relevo").className = "relevo";
+    $("#sal-relevo").textContent = "Relevo: " + f.relevo.de + " entrega «" +
+      f.relevo.entrega + "» a " + f.relevo.a;
+  } else {
+    $("#sal-relevo").className = "relevo vacio";
+    $("#sal-relevo").textContent = f.resumen;
+  }
+  $$("#sal-dias button").forEach(function(b){
+    b.setAttribute("aria-pressed", String(Number(b.getAttribute("data-dia")) === SALA.dia));
+  });
+}
+
+async function cargarDia(dia){
+  if (SALA.pelis[dia]){
+    SALA.peli = SALA.pelis[dia];
+    pintarFotograma();
+    return;
+  }
+  if (SALA.pidiendo) return;
+  SALA.pidiendo = true;
+  try {
+    var peli = await pedir("/api/estudio/pelicula?dia=" + dia + "&paso=" + PASO);
+    SALA.pelis[dia] = peli;
+    SALA.peli = peli;
+    pintarFotograma();
+  } catch(e){
+    fallo("#sal-relevo", e);
+    SALA.corriendo = false;
+  } finally {
+    SALA.pidiendo = false;
+  }
+}
+
+function ticSala(){
+  if (!SALA.corriendo || !SALA.visible || !SALA.peli) return;
+  SALA.cuadro += 1;
+  if (SALA.cuadro >= SALA.peli.fotogramas.length){
+    SALA.cuadro = 0;
+    SALA.dia = SALA.dia % 7 + 1;
+    cargarDia(SALA.dia);
+    return;
+  }
+  pintarFotograma();
+}
+
+function marchaSala(correr){
+  SALA.corriendo = correr;
+  $("#sal-play").setAttribute("aria-pressed", String(correr));
+  $("#sal-play").textContent = correr ? "Pausa" : "Seguir";
+}
+
+function ritmoSala(ms){
+  SALA.ms = ms;
+  if (SALA.timer) clearInterval(SALA.timer);
+  SALA.timer = setInterval(ticSala, SALA.ms);
+}
+
+function salaVisible(visible){
+  SALA.visible = visible;
+  if (!visible) return;
+  if (!SALA.timer) ritmoSala(SALA.ms);
+  cargarDia(SALA.dia);
+}
+
+/* --- el tribunal, el plan, la carrera y la pila ----------------------- */
+var JUECES_COL = ["algoritmo", "riesgo", "operacion"];
+
+function pintarTribunal(d){
+  var h = '<div class="scroll"><table><thead><tr><th>Estrategia</th>' +
+    "<th>Cadencia</th><th>J1 algoritmo</th><th>J2 riesgo</th>" +
+    "<th>J3 operacion</th><th>Media</th></tr></thead><tbody>";
+  d.tabla.forEach(function(f){
+    var clase = f.ganadora ? "gana" : (f.vetada ? "vetada" : "");
+    h += '<tr class="' + clase + '"><td><b>' + esc(f.nombre) + "</b></td><td>" +
+      esc(f.cadencia) + "</td>";
+    JUECES_COL.forEach(function(j){
+      h += '<td class="n">' + f[j].toFixed(2) + "</td>";
+    });
+    h += '<td class="n"><b>' + f.media.toFixed(2) + "</b>" +
+      (f.vetada ? ' <span class="mal">vetada</span>' : "") + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+
+  h += '<p class="note" style="margin-top:10px">' + esc(d.fallo.resumen) + "</p>";
+  d.fallo.enmiendas.forEach(function(e){
+    h += '<div class="enm"><b>Enmienda de ' + esc(e.juez) + "</b> — " +
+      esc(e.criterio) + ", " + e.nota + "/5: " + esc(e.enmienda) +
+      '<br><span class="muted">' + esc(e.porque) + "</span></div>";
+  });
+  d.fallo.condiciones.forEach(function(c){
+    h += '<div class="cond"><b>Condicion</b> — ' + esc(c) + "</div>";
+  });
+
+  d.jueces.forEach(function(j){
+    var punto = d.fallo.puntuaciones.filter(function(p){
+      return p.juez === j.clave && p.estrategia === d.fallo.ganadora;
+    })[0];
+    h += "<details><summary>" + esc(j.nombre + " · " + j.oficio) +
+      " — rubrica y notas de la ganadora</summary>" +
+      '<p class="note">' + esc(j.mira) +
+      (j.veto ? " <b>Tiene veto por debajo de " + j.veto.toFixed(1) + ".</b>" : "") +
+      '</p><div class="scroll"><table><thead><tr><th>Criterio</th><th>Peso</th>' +
+      "<th>Nota</th><th>Por que</th></tr></thead><tbody>";
+    punto.desglose.forEach(function(f){
+      h += "<tr><td>" + esc(f.pregunta) + '</td><td class="n">' +
+        Math.round(f.peso * 100) + '%</td><td class="n">' + f.nota + "/5</td><td>" +
+        esc(f.porque) + (f.enmienda ? ' <b class="mal">enmienda</b>' : "") + "</td></tr>";
+    });
+    h += "</tbody></table></div></details>";
+  });
+  $("#est-tribunal").innerHTML = h;
+}
+
+function pintarSemana(d){
+  var h = tile(d.plan.horas_semana, "horas a la semana de una persona") +
+    tile(d.plan.dias.filter(function(x){ return x.formato !== "short"; }).length,
+         "largos a la semana") +
+    tile(d.plan.dias.filter(function(x){ return x.formato === "short"; }).length,
+         "Shorts a la semana");
+  h = '<div class="tiles">' + h + "</div>";
+  h += '<p class="note">' + esc(d.plan.resumen) + "</p>";
+  h += '<div class="scroll"><table><thead><tr><th>Dia</th><th>Hora</th>' +
+    "<th>Formato</th><th>Angulo</th><th>Trabajo</th><th>Publica</th>" +
+    "</tr></thead><tbody>";
+  d.plan.dias.forEach(function(x){
+    var hora = ("0" + Math.floor(x.hora / 60)).slice(-2) + ":" +
+               ("0" + (x.hora % 60)).slice(-2);
+    h += "<tr><td>" + esc(x.nombre) + "</td><td>" + hora + "</td><td>" +
+      esc(x.formato) + "</td><td>" + esc(x.tipo) + '</td><td class="n">' +
+      x.minutos + " min</td><td>" + esc(x.titulo) + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+
+  h += "<h3>Carga por agente</h3><p class='note'>El cuello de botella decide " +
+    "que herramienta merece la pena pagar, y no al contrario.</p>";
+  var tope = Math.max.apply(null, Object.keys(d.plan.carga).map(function(k){
+    return d.plan.carga[k];
+  }));
+  h += '<div class="scroll"><table><tbody>';
+  Object.keys(d.plan.carga).forEach(function(k){
+    var m = d.plan.carga[k];
+    h += "<tr><td>" + esc(k) + '</td><td style="width:62%">' +
+      '<div class="pg" style="height:9px"><i style="width:' +
+      Math.round(m / tope * 100) + '%"></i></div></td><td class="n">' + m +
+      " min</td></tr>";
+  });
+  h += "</tbody></table></div>";
+  d.plan.cadencia.forEach(function(v){
+    h += '<p class="note">' + (v.pasa ? "✓ " : "✗ ") + esc(v.motivo) + "</p>";
+  });
+  $("#est-semana").innerHTML = h;
+}
+
+function pintarCarrera(d){
+  var c = d.carrera, r = d.rutas;
+  var h = '<div class="tiles">' +
+    tile(c.dias_hasta_el_cambio, "dias hasta que sube el liston") +
+    tile(c.vistas_necesarias, "vistas de documental para la puerta") +
+    tile(c.minutos_por_vista, "minutos vistos por vista") +
+    tile(r.veces_mas_vistas, "veces mas vistas pide la ruta de Shorts") +
+    "</div>";
+  h += '<p class="note"><b>' + esc(c.veredicto) + "</b></p>";
+  h += '<div class="scroll"><table><thead><tr><th>Ruta a la misma puerta</th>' +
+    "<th>Vistas necesarias</th><th>Publicidad que dejan</th><th>RPM</th>" +
+    "</tr></thead><tbody>";
+  [["Documentales (horas de visualizacion)", r.ruta_horas],
+   ["Shorts (vistas en 90 dias)", r.ruta_shorts]].forEach(function(par){
+    var x = par[1];
+    h += "<tr><td>" + par[0] + '</td><td class="n">' + sp(x.vistas) +
+      '</td><td class="n">' + sp(x.ingreso[0]) + "–" + sp(x.ingreso[1]) +
+      ' $</td><td class="n">' + x.rpm[0] + "–" + x.rpm[1] + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+  h += '<p class="note"><span class="medido">NO MEDIDO</span> Los RPM son ' +
+    esc(r.fuente_rpm) + ". La hipotesis de vistas por documental la pone quien " +
+    "la escribe: hasta que haya tres meses de datos propios, esto es una " +
+    "ecuacion y no una prevision.</p>";
+  $("#est-carrera").innerHTML = h;
+}
+
+function pintarPila(d){
+  var p = d.herramientas;
+  var h = '<div class="tiles">' +
+    tile(p.coste_mes, "euros al mes de pila") +
+    tile(p.horas_sin_herramientas, "horas sin herramientas") +
+    tile(p.horas_semana, "horas con la pila") +
+    tile(p.coste_por_hora_ahorrada, "euros por hora ahorrada") +
+    "</div>";
+  h += '<p class="note">' + esc(p.resumen) + "</p>";
+  h += '<div class="scroll"><table><thead><tr><th>Herramienta</th><th>Oficio</th>' +
+    "<th>Coste/mes</th><th>Quita</th><th>Para que</th></tr></thead><tbody>";
+  function fila(x, dentro){
+    var coste = x.coste_mes === null ? "NO VERIFICADO"
+      : (x.coste_mes ? sp(x.coste_mes) + " €" : "gratis");
+    return "<tr" + (dentro ? "" : ' class="muted"') + "><td><b>" + esc(x.nombre) +
+      "</b></td><td>" + esc(x.oficio) + "</td><td" +
+      (x.precio_verificado ? ' class="n"' : ' class="n medido"') + ">" + coste +
+      '</td><td class="n">' + (x.minutos ? x.minutos + " min" : "—") + "</td><td>" +
+      esc(x.nota) + (x.riesgo ? '<br><b class="mal">Riesgo:</b> ' + esc(x.riesgo) : "") +
+      "</td></tr>";
+  }
+  p.elegidas.forEach(function(x){ h += fila(x, true); });
+  p.sin_precio.forEach(function(x){ h += fila(x, false); });
+  p.descartadas.forEach(function(x){ h += fila(x, false); });
+  h += "</tbody></table></div>";
+  h += '<p class="note">Las descartadas y las de precio no verificado salen en ' +
+    "gris: no cuentan en el ahorro. Un precio aproximado en una hoja de costes " +
+    "es el error que este repositorio existe para no cometer.</p>";
+  $("#est-pila").innerHTML = h;
+}
+
+function pintarCalendario(d){
+  var h = '<div class="scroll"><table><thead><tr><th>Fecha</th><th>Dia</th>' +
+    "<th>Semana</th><th>Hora</th><th>Formato</th><th>Que se publica</th>" +
+    "</tr></thead><tbody>";
+  d.calendario.forEach(function(e){
+    if (!e.publica){
+      h += '<tr class="muted"><td>' + e.fecha + "</td><td>" + esc(e.dia_semana) +
+        "</td><td>0</td><td>—</td><td>reserva</td><td>" + esc(e.nota) + "</td></tr>";
+      return;
+    }
+    var hora = ("0" + Math.floor(e.hora / 60)).slice(-2) + ":" +
+               ("0" + (e.hora % 60)).slice(-2);
+    h += "<tr><td>" + e.fecha + "</td><td>" + esc(e.dia_semana) + "</td><td>" +
+      e.semana + "</td><td>" + hora + "</td><td>" + esc(e.formato) + " · " +
+      esc(e.tipo) + "</td><td>" + esc(e.titulo) + "</td></tr>";
+  });
+  h += "</tbody></table></div>";
+  $("#est-calendario").innerHTML = h;
+}
+
+async function verEstudio(){
+  var boton = $("#est-go");
+  boton.disabled = true;
+  try {
+    var d = await pedir("/api/estudio?presupuesto=" +
+      encodeURIComponent($("#est-presupuesto").value || 0) + "&vistas=" +
+      encodeURIComponent($("#est-vistas").value || 0));
+    pintarTribunal(d);
+    pintarSemana(d);
+    pintarCarrera(d);
+    pintarPila(d);
+    pintarCalendario(d);
+  } catch(e){
+    fallo("#est-tribunal", e);
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 /* --- arranque --------------------------------------------------------- */
 $$("nav.tabs button").forEach(function(b){
-  b.addEventListener("click", function(){ abrir(b.getAttribute("data-tab")); });
+  b.addEventListener("click", function(){
+    var nombre = b.getAttribute("data-tab");
+    abrir(nombre);
+    salaVisible(nombre === "estudio");
+  });
 });
 $("#aud-go").addEventListener("click", auditar);
 $("#aud-site").addEventListener("keydown", function(e){ if (e.key === "Enter") auditar(); });
@@ -881,6 +1270,19 @@ $("#mem-save").addEventListener("click", guardarPagina);
 $("#mem-obs-go").addEventListener("click", guardarObservacion);
 $("#tar-go").addEventListener("click", calcularTarifa);
 $("#inf-go").addEventListener("click", generarInforme);
+$("#est-go").addEventListener("click", verEstudio);
+$("#est-vistas").addEventListener("keydown", function(e){ if (e.key === "Enter") verEstudio(); });
+$("#sal-play").addEventListener("click", function(){ marchaSala(!SALA.corriendo); });
+$("#sal-paso").addEventListener("change", function(){
+  ritmoSala(Number($("#sal-paso").value) || 240);
+});
+$$("#sal-dias button").forEach(function(b){
+  b.addEventListener("click", function(){
+    SALA.dia = Number(b.getAttribute("data-dia"));
+    SALA.cuadro = 0;
+    cargarDia(SALA.dia);
+  });
+});
 
 var EJEMPLO_CIT = "# Coste de un sistema septico aerobico\n\n" +
   "## Cuanto cuesta instalar un sistema aerobico en Texas?\n\n" +
@@ -907,10 +1309,13 @@ $("#clu-csv").value = "Keyword,Search Volume,CPC\n" +
   "mantenimiento septico aerobico,800,7\n";
 
 var inicial = (location.hash || "#auditoria").slice(1);
-abrir(["auditoria","citabilidad","oportunidad","clusters","memoria","negocio"]
-      .indexOf(inicial) >= 0
+abrir(["auditoria","citabilidad","oportunidad","clusters","memoria","negocio",
+       "estudio"].indexOf(inicial) >= 0
       ? inicial : "auditoria");
 medirCitabilidad();
+verEstudio();
+marchaSala(true);
+salaVisible(inicial === "estudio");
 """
 
 BODY = """
@@ -928,6 +1333,7 @@ BODY = """
   <button data-tab="clusters" aria-selected="false">4 · Clusters</button>
   <button data-tab="memoria" aria-selected="false">5 · Memoria</button>
   <button data-tab="negocio" aria-selected="false">6 · Negocio</button>
+  <button data-tab="estudio" aria-selected="false">7 · Estudio</button>
 </nav>
 
 <!-- 1 -->
@@ -1174,6 +1580,107 @@ BODY = """
     </div>
   </div>
   <div id="inf-out"></div>
+</div>
+
+<!-- 7 -->
+<div data-panel="estudio" hidden>
+  <div class="panel">
+    <h2>El estudio del canal: once agentes y una compuerta cada uno</h2>
+    <p class="note">Mismo motor que el resto del banco, aplicado a video: el
+    plan no es un calendario, son turnos con minutos; la estrategia no es una
+    opinion, es una rubrica con pesos y un veto; y la publicacion diaria no se
+    sostiene con disciplina, se sostiene con una semana de reserva por delante.
+    Las cifras de esta pestana salen del paquete <span class="m">estudio/</span>
+    y estan probadas aparte: ninguna se teclea aqui.</p>
+    <div class="row">
+      <div><label for="est-vistas">Hipotesis: vistas por documental</label>
+        <input type="number" id="est-vistas" value="1500" min="0" step="100"></div>
+      <div><label for="est-presupuesto">Presupuesto de herramientas (€/mes)</label>
+        <input type="number" id="est-presupuesto" value="25" min="0" step="5"></div>
+      <div><button class="go" id="est-go" type="button">Recalcular</button></div>
+    </div>
+    <p class="note" style="margin-top:8px">La hipotesis de vistas es lo unico de
+    esta pantalla que no sale de ningun dato: la pone quien la asume, y el
+    veredicto de la carrera dice con esas palabras que no es una prevision.</p>
+  </div>
+
+  <div class="panel">
+    <h3>La sala, en vivo</h3>
+    <p class="note">Cada munequito es un oficio con una entrada, una salida y
+    —nueve de los once— una compuerta que puede parar el dia. Azul es
+    trabajando, verde entregado, rojo parado por una compuerta, y en gris los
+    que hoy no les toca. El reloj no es la hora: es el minuto de la jornada, y
+    el estado es deterministico — el mismo minuto da siempre lo mismo.</p>
+    <div class="mandos">
+      <span id="sal-dias">
+        <button type="button" data-dia="1" aria-pressed="true">L</button>
+        <button type="button" data-dia="2" aria-pressed="false">M</button>
+        <button type="button" data-dia="3" aria-pressed="false">X</button>
+        <button type="button" data-dia="4" aria-pressed="false">J</button>
+        <button type="button" data-dia="5" aria-pressed="false">V</button>
+        <button type="button" data-dia="6" aria-pressed="false">S</button>
+        <button type="button" data-dia="7" aria-pressed="false">D</button>
+      </span>
+      <button type="button" id="sal-play" aria-pressed="true">Pausa</button>
+      <label class="check" for="sal-paso">velocidad
+        <select id="sal-paso">
+          <option value="620">lenta</option>
+          <option value="240" selected>normal</option>
+          <option value="90">rapida</option>
+        </select></label>
+      <span class="hora" id="sal-hora">cargando...</span>
+    </div>
+    <div class="sala" id="sal-grid"></div>
+    <div class="relevo vacio" id="sal-relevo">—</div>
+  </div>
+
+  <div class="panel">
+    <h3>El tribunal: tres rubricas, un veto y un fallo aritmetico</h3>
+    <p class="note">Tres jueces puntuan de 0 a 5 los criterios de su oficio con
+    pesos declarados. El de riesgo tiene veto: por debajo de 2,5 una estrategia
+    queda fuera aunque gane las otras dos rubricas. Y las enmiendas no las
+    escribe nadie — se activan solas cuando la ganadora saca menos de 3 en un
+    criterio, con el nombre del juez que la impone.</p>
+  </div>
+  <div id="est-tribunal"></div>
+
+  <div class="panel">
+    <h3>La semana canonica</h3>
+    <p class="note">Una investigacion, siete publicaciones: el documental del
+    viernes y el expediente del martes, que es donde viven los minutos vistos, y
+    cinco Shorts de cinco angulos distintos, que es lo que comprueba la
+    compuerta de variacion. Lo que se publica esta semana se produjo la
+    anterior.</p>
+  </div>
+  <div id="est-semana"></div>
+
+  <div class="panel">
+    <h3>La carrera contra la puerta</h3>
+    <p class="note">El 01-02-2027 el liston de entrada al Programa de Socios
+    pasa de 4.000 a 8.000 horas de visualizacion en 365 dias, y de 10 a 20
+    millones de vistas de Shorts en 90 dias. Quien ya esta dentro no se ve
+    afectado, asi que la fecha no es un detalle: es el plazo.</p>
+  </div>
+  <div id="est-carrera"></div>
+
+  <div class="panel">
+    <h3>Herramientas: se paga lo que quita minutos de un turno</h3>
+    <p class="note">La pregunta «cual es la mejor herramienta de edicion» no
+    tiene respuesta sin saber cual es el cuello de botella. Aqui el cuello esta
+    calculado turno a turno, y la pila se ordena por minutos ahorrados entre
+    euro al mes. Los minutos que dice que quita cada una son hipotesis
+    declaradas, no mediciones: la primera vez que se cronometra un montaje, se
+    corrigen.</p>
+  </div>
+  <div id="est-pila"></div>
+
+  <div class="panel">
+    <h3>Calendario: la semana 0 produce y no publica</h3>
+    <p class="note">La enmienda del tercer juez, puesta en fechas. Sin el
+    colchon, un dia malo es un dia sin publicar y la cadencia depende de que a
+    una persona no le pase nada siete dias seguidos.</p>
+  </div>
+  <div id="est-calendario"></div>
 </div>
 </div>
 """
