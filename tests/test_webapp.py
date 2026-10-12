@@ -511,3 +511,57 @@ class TestNegocioHTTP(unittest.TestCase):
         supuestas = [c for s in r["secciones"] for c in s["cifras"]
                      if c["origen"] == "supuesto"]
         self.assertTrue(supuestas, "sin datos, las cifras tienen que ir marcadas")
+
+
+class TestEstudioHTTP(unittest.TestCase):
+    """La pestana 7 por HTTP: el fallo, la sala y lo que rechaza la frontera."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = Background().__enter__()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.app.__exit__(None, None, None)
+
+    def test_el_estudio_entero_en_una_peticion(self):
+        estado, r = pedir(self.app.base,
+                          "/api/estudio?presupuesto=25&vistas=1500&hoy=2026-10-05")
+        self.assertEqual(estado, 200)
+        self.assertEqual(r["fallo"]["ganadora"], "catalogo")
+        self.assertEqual(len(r["agentes"]), 11)
+        self.assertEqual(len(r["plan"]["dias"]), 7)
+        self.assertEqual(r["carrera"]["dias_hasta_el_cambio"], 119)
+        self.assertEqual(len(r["calendario"]), 35)
+        self.assertLessEqual(r["herramientas"]["coste_mes"], 25)
+
+    def test_la_jornada_entera_viaja_en_una_peticion(self):
+        """Un fotograma por minuto llenaba el registro del servidor de ruido."""
+        estado, r = pedir(self.app.base, "/api/estudio/pelicula?dia=4&paso=5")
+        self.assertEqual(estado, 200)
+        self.assertEqual(len(r["agentes"]), 11)
+        self.assertGreater(len(r["fotogramas"]), 10)
+        self.assertEqual(r["fotogramas"][0]["minuto"], 0)
+        self.assertEqual(r["fotogramas"][-1]["minuto"], r["jornada"])
+
+        indice = [a["clave"] for a in r["agentes"]].index("montador")
+        progreso = [f["estados"][indice]["p"] for f in r["fotogramas"]]
+        self.assertEqual(progreso, sorted(progreso))
+
+    def test_un_dia_fuera_de_la_semana_da_400_con_el_rango(self):
+        estado, r = pedir(self.app.base, "/api/estudio/pelicula?dia=9")
+        self.assertEqual(estado, 400)
+        self.assertIn("entre 1 y 7", r["error"])
+
+    def test_una_fecha_ilegible_da_400(self):
+        estado, r = pedir(self.app.base, "/api/estudio?hoy=el%20martes")
+        self.assertEqual(estado, 400)
+        self.assertIn("AAAA-MM-DD", r["error"])
+
+    def test_la_pestana_del_estudio_existe_en_la_pagina(self):
+        req = urllib.request.Request(self.app.base + "/")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode()
+        self.assertIn('data-panel="estudio"', html)
+        self.assertIn('data-tab="estudio"', html)
+        self.assertIn("/api/estudio/pelicula", html)

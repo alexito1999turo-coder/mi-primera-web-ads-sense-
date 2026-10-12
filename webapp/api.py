@@ -13,6 +13,7 @@ import io
 import os
 import re
 from dataclasses import asdict
+from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -24,6 +25,12 @@ from clusters.graph import build as build_graph
 from clusters.keywords import Keyword
 from clusters.plan import build as build_plan
 from clusters.validate import validate as validate_graph
+from estudio import herramientas as estudio_herramientas
+from estudio import jueces as estudio_jueces
+from estudio import plan as estudio_plan
+from estudio.agentes import PLANTILLA
+from estudio.carrera import Carrera, comparar_rutas
+from estudio.sala import Sala
 from insight.gsc import Report, Row
 from insight.opportunity import analyse as analyse_opportunity
 
@@ -706,3 +713,68 @@ def informe_mensual(cliente: str, data: dict) -> dict:
         "bloqueantes": informe.blockers,
         "markdown": informe.to_markdown(),
     }
+
+
+# --- el estudio del canal ------------------------------------------------
+
+MAX_PRESUPUESTO = 2000.0
+MAX_VISTAS = 5_000_000.0
+
+
+def estudio(presupuesto: float, vistas: float, hoy: str = "") -> dict:
+    """El fallo del tribunal, el plan, la carrera y la pila de herramientas.
+
+    No hay nada que decidir aqui: las cuatro cosas salen del paquete `estudio`
+    y esta funcion solo valida lo que llega del formulario. El unico cuidado es
+    con `vistas`, que es una hipotesis de quien la escribe y no una medicion —
+    el veredicto lo dice con esas palabras.
+    """
+    presupuesto = _numero({"presupuesto": presupuesto}, "presupuesto", 0.0, 0.0,
+                           MAX_PRESUPUESTO)
+    vistas = _numero({"vistas": vistas}, "vistas", 0.0, 0.0, MAX_VISTAS)
+
+    if hoy.strip():
+        try:
+            dia = date.fromisoformat(hoy.strip()[:10])
+        except ValueError:
+            raise BadRequest("La fecha tiene que ser AAAA-MM-DD.") from None
+    else:
+        dia = date.today()
+
+    carrera = Carrera(hoy=dia)
+    fallo = estudio_jueces.fallo()
+
+    return {
+        "hoy": dia.isoformat(),
+        "agentes": [a.to_dict() for a in PLANTILLA],
+        "fallo": fallo.to_dict(),
+        "tabla": estudio_jueces.tabla(),
+        "jueces": [
+            {"clave": j.clave, "nombre": j.nombre, "oficio": j.oficio,
+             "mira": j.mira, "veto": j.veto_por_debajo_de,
+             "criterios": [{"clave": c.clave, "pregunta": c.pregunta,
+                            "peso": c.peso, "enmienda": c.enmienda}
+                           for c in j.criterios]}
+            for j in estudio_jueces.JUECES
+        ],
+        "plan": {
+            "resumen": estudio_plan.describe(),
+            "horas_semana": estudio_plan.horas_semana(),
+            "minutos_semana": estudio_plan.minutos_semana(),
+            "carga": estudio_plan.carga_por_agente(),
+            "dias": [d.to_dict() for d in estudio_plan.SEMANA],
+            "cadencia": [v.to_dict() for v in estudio_plan.veredicto_cadencia()],
+        },
+        "calendario": [e.to_dict() for e in estudio_plan.calendario(dia, semanas=4)],
+        "carrera": carrera.to_dict(vistas_por_largo=vistas),
+        "rutas": comparar_rutas(carrera),
+        "herramientas": estudio_herramientas.pila(presupuesto),
+        "riesgos": estudio_herramientas.riesgos(),
+    }
+
+
+def estudio_pelicula(dia: int, paso: int) -> dict:
+    """La jornada entera de un dia. Una peticion por dia, no una por fotograma."""
+    dia = int(_numero({"dia": dia}, "dia", 1, 1, len(estudio_plan.SEMANA)))
+    paso = int(_numero({"paso": paso}, "paso", 5, 1, 60))
+    return Sala.del_dia(dia).pelicula(paso)
