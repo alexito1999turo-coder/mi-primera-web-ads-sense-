@@ -106,9 +106,10 @@ def _animar(indice: int, velocidad: float, paso: int) -> None:
         sys.stdout.write("\x1b[H\x1b[2J")
         print(f"La sala · {s.dia.nombre} · minuto {minuto} de {s.jornada}\n")
         print("\n".join(s.lineas(minuto)))
-        relevo = s.relevo_en(minuto, margen=paso)
-        if relevo:
-            print(f"\n  relevo: {relevo['de']} -> {relevo['a']} ({relevo['entrega']})")
+        relevos = s.relevos_en(minuto, margen=paso)
+        if relevos:
+            for relevo in relevos:
+                print(f"\n  relevo: {relevo['de']} -> {relevo['a']} ({relevo['entrega']})")
         else:
             print(f"\n  {s.describe(minuto)}")
         sys.stdout.flush()

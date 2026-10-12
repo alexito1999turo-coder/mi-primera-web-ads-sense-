@@ -446,13 +446,13 @@ class SalaEnVivo(unittest.TestCase):
 
     def test_el_relevo_se_ve_durante_unos_minutos(self):
         s = Sala.del_dia(1)
-        self.assertIsNone(s.relevo_en(5))
-        relevo = s.relevo_en(27)
-        self.assertEqual((relevo["de"], relevo["a"]), ("medidor", "cazador"))
+        self.assertEqual(s.relevos_en(5), [])
+        relevos = s.relevos_en(27)
+        self.assertEqual([(r["de"], r["a"]) for r in relevos], [("medidor", "cazador")])
 
     def test_un_relevo_hacia_un_bloqueado_no_es_un_relevo(self):
         s = Sala.del_dia(1, {"cazador": "caso saturado"})
-        self.assertIsNone(s.relevo_en(27))
+        self.assertEqual(s.relevos_en(27), [])
 
     def test_el_minuto_se_recorta_a_la_jornada(self):
         s = Sala.del_dia(6)

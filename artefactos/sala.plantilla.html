@@ -371,11 +371,12 @@ function pinta(){
     caja.innerHTML = "<b>" + esc(parado.nombre) + "</b> no pasa la compuerta «" +
       esc(parado.compuerta) + "». El día se para aquí: lo que viene detrás no " +
       "tiene con qué trabajar.";
-  } else if (f.relevo){
+  } else if (f.relevos && f.relevos.length){
+    var r0 = f.relevos[0];
     caja.className = "relevo";
-    caja.innerHTML = "Relevo · <b>" + esc(POR_CLAVE[f.relevo.de].nombre) +
-      "</b> entrega «" + esc(f.relevo.entrega) + "» a <b>" +
-      esc(POR_CLAVE[f.relevo.a].nombre) + "</b>";
+    caja.innerHTML = "Relevo · <b>" + esc(POR_CLAVE[r0.de].nombre) +
+      "</b> entrega «" + esc(r0.entrega) + "» a <b>" +
+      esc(POR_CLAVE[r0.a].nombre) + "</b>";
   } else {
     caja.className = "relevo quieto";
     caja.textContent = f.resumen;

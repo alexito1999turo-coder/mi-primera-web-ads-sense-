@@ -998,10 +998,11 @@ function pintarFotograma(){
   $("#sal-hora").textContent = peli.dia.nombre + " · minuto " + f.minuto +
     " de " + peli.jornada + " · publica a las " + hora;
 
-  if (f.relevo){
+  if (f.relevos && f.relevos.length){
+    var r0 = f.relevos[0];
     $("#sal-relevo").className = "relevo";
-    $("#sal-relevo").textContent = "Relevo: " + f.relevo.de + " entrega «" +
-      f.relevo.entrega + "» a " + f.relevo.a;
+    $("#sal-relevo").textContent = "Relevo: " + r0.de + " entrega «" +
+      r0.entrega + "» a " + r0.a;
   } else {
     $("#sal-relevo").className = "relevo vacio";
     $("#sal-relevo").textContent = f.resumen;

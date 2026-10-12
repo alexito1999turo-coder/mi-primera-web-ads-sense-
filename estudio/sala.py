@@ -149,25 +149,34 @@ class Sala:
             estados.append(base)
         return estados
 
-    def relevo_en(self, minuto: int, margen: int = 5) -> dict | None:
-        """El relevo que esta pasando ahora mismo, si lo hay.
+    def relevos_en(self, minuto: int, margen: int = 5) -> list[dict]:
+        """Los relevos que estan pasando ahora mismo.
 
-        Dibuja la flecha entre dos munequitos. Sin margen no se veria nunca:
-        el instante exacto del relevo dura un minuto de jornada y la pagina
-        pinta cada varios.
+        Dibuja el paso de una entrega entre dos munequitos. Sin margen no se
+        veria nunca: el instante exacto del relevo dura un minuto de jornada y
+        la pagina pinta cada varios.
+
+        Devuelve una lista, y no uno solo, por un fallo que destapo subir el
+        paso de muestreo: el viernes, con el paso a 60, en la misma ventana
+        caen el relevo del montador y el del portadista, y la version anterior
+        se quedaba con el primero y se tragaba el segundo sin avisar. Un relevo
+        que no se dibuja es un munequito que aparece en su sitio con el trabajo
+        hecho y nadie sabe de donde salio.
+
+        Y el filtro mira los DOS extremos. Antes solo miraba el destino, asi
+        que un agente bloqueado seguia entregando: en la planta se veia a un
+        munequito rojo y parado levantarse y cruzar el pasillo. Si el que
+        entrega no ha podido trabajar, no hay nada que entregar.
         """
+        fuera = []
         for t in self.dia.turnos:
-            if t.relevo and 0 <= minuto - t.fin <= margen:
-                # Un relevo hacia un agente bloqueado no es un relevo, es un
-                # paquete que se queda en la puerta.
-                if t.relevo in self.bloqueos:
-                    continue
-                return {
-                    "de": t.agente,
-                    "a": t.relevo,
-                    "entrega": t.entrega,
-                }
-        return None
+            if not t.relevo or not 0 <= minuto - t.fin <= margen:
+                continue
+            if t.agente in self.bloqueos or t.relevo in self.bloqueos:
+                continue
+            fuera.append({"de": t.agente, "a": t.relevo, "entrega": t.entrega,
+                          "minuto": t.fin})
+        return fuera
 
     def to_dict(self, minuto: int) -> dict:
         estados = self.estado(minuto)
@@ -179,7 +188,7 @@ class Sala:
             "minuto": max(0, min(minuto, self.jornada)),
             "jornada": self.jornada,
             "agentes": [s.to_dict() for s in estados],
-            "relevo": self.relevo_en(minuto),
+            "relevos": self.relevos_en(minuto),
             "cuenta": cuenta,
             "bloqueada": any(s.estado == BLOQUEADO for s in estados),
             "resumen": self.describe(minuto),
@@ -229,7 +238,7 @@ class Sala:
                      "r": s.minutos_restantes}
                     for s in self.estado(tope)
                 ],
-                "relevo": self.relevo_en(tope, margen=paso),
+                "relevos": self.relevos_en(tope, margen=paso),
                 "resumen": self.describe(tope),
             })
         return {
