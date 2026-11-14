@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,7 +21,16 @@ def _esc(ruta: str) -> str:
     return ruta.replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
-def montar(video_avatar: str, rutas: dict, tramos: list, ass: str, salida: str) -> str:
+def arranques_voz(ruta: str) -> list[float]:
+    """Instantes en que la voz arranca tras una pausa (fin de cada silencio)."""
+    r = subprocess.run(["ffmpeg", "-v", "info", "-i", ruta, "-vn", "-af", "silencedetect=noise=-34dB:d=0.16",
+                        "-f", "null", "-"], capture_output=True, text=True)
+    return [float(x) for x in re.findall(r"silence_end: ([0-9.]+)", r.stderr)]
+
+
+def montar(video_avatar: str, rutas: dict, tramos: list, ass: str, salida: str, clic: str | None = None) -> str:
+    """Un flash y un clic de cámara por partido, justo cuando Julen empieza a hablar de él.
+    Nunca hay flashes fuera de esos instantes."""
     dur = duracion(video_avatar)
     bucle = ["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}"]
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", video_avatar, *bucle, "-i", rutas["base"]]
@@ -29,23 +39,30 @@ def montar(video_avatar: str, rutas: dict, tramos: list, ass: str, salida: str) 
         f"[1:v][av]overlay=0:{AVATAR_Y}[v0]",
     ]
     n, actual = 2, "v0"
-    # resalte del partido del que se está hablando
-    for idx, ini, fin in tramos:
+    for idx, ini, fin in tramos:   # resalte del partido del que se está hablando
         cmd += [*bucle, "-i", rutas["resaltes"][idx]]
-        filtros.append(f"[{n}:v]format=rgba,fade=t=in:st={ini:.2f}:d=0.18:alpha=1,"
-                       f"fade=t=out:st={max(ini, fin - 0.18):.2f}:d=0.18:alpha=1[r{n}]")
-        filtros.append(f"[{actual}][r{n}]overlay=0:0:enable='between(t,{ini:.2f},{fin:.2f})'[v{n}]")
+        filtros.append(f"[{n}:v]format=rgba,fade=t=in:st={ini:.3f}:d=0.10:alpha=1,"
+                       f"fade=t=out:st={max(ini, fin - 0.15):.3f}:d=0.15:alpha=1[r{n}]")
+        filtros.append(f"[{actual}][r{n}]overlay=0:0:enable='between(t,{ini:.3f},{fin:.3f})'[v{n}]")
         actual, n = f"v{n}", n + 1
-    # flash en cada cambio de partido
-    for _, ini, _ in tramos:
+    for _, ini, _ in tramos:       # flash: empieza en el instante exacto, nunca antes
         cmd += [*bucle, "-i", rutas["flash"]]
-        a = max(0.0, ini - 0.05)
-        filtros.append(f"[{n}:v]format=rgba,fade=t=in:st={a:.2f}:d=0.05:alpha=1,"
-                       f"fade=t=out:st={a + 0.05:.2f}:d=0.38:alpha=1[f{n}]")
-        filtros.append(f"[{actual}][f{n}]overlay=0:0:enable='between(t,{a:.2f},{a + 0.45:.2f})'[v{n}]")
+        filtros.append(f"[{n}:v]format=rgba,fade=t=in:st={ini:.3f}:d=0.04:alpha=1,"
+                       f"fade=t=out:st={ini + 0.04:.3f}:d=0.36:alpha=1[f{n}]")
+        filtros.append(f"[{actual}][f{n}]overlay=0:0:enable='between(t,{ini:.3f},{ini + 0.42:.3f})'[v{n}]")
         actual, n = f"v{n}", n + 1
     filtros.append(f"[{actual}]ass='{_esc(ass)}':fontsdir='{_esc(str(FUENTES))}'[vf]")
-    cmd += ["-filter_complex", ";".join(filtros), "-map", "[vf]", "-map", "0:a?",
+    audio = "0:a?"
+    if clic and tramos:
+        mezcla = ["[0:a]"]
+        for _, ini, _ in tramos:
+            cmd += ["-i", clic]
+            filtros.append(f"[{n}:a]adelay={int(round(ini * 1000))}:all=1,volume=0.9[c{n}]")
+            mezcla.append(f"[c{n}]")
+            n += 1
+        filtros.append("".join(mezcla) + f"amix=inputs={len(mezcla)}:normalize=0:duration=first[af]")
+        audio = "[af]"
+    cmd += ["-filter_complex", ";".join(filtros), "-map", "[vf]", "-map", audio,
             "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", "30",
             "-c:a", "aac", "-b:a", "192k", "-t", f"{dur:.3f}", "-movflags", "+faststart", salida]
     r = subprocess.run(cmd, capture_output=True, text=True)

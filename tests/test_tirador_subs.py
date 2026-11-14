@@ -45,9 +45,19 @@ def test_guion_por_bloques_no_resalta_intro_ni_cierre():
     assert tramos[-1][2] < 14.0        # el cierre también
 
 
-def test_ass_marca_en_verde_solo_la_palabra_activa(tmp_path):
-    palabras = subs.tiempos_palabras("hola qué tal", [], 3.0)
+def test_ass_colorea_solo_la_palabra_activa_y_fragmenta_de_1_a_3(tmp_path):
+    palabras = subs.tiempos_palabras("hola qué tal estamos hoy con cuatro partidazos tremendos", [], 6.0)
+    grupos = subs.fragmentar(palabras)
+    assert all(1 <= len(g) <= 3 for g in grupos)
     ruta = tmp_path / "s.ass"
     subs.escribir_ass(palabras, str(ruta))
-    lineas = [l for l in ruta.read_text().splitlines() if l.startswith("Dialogue")]
-    assert len(lineas) == 3 and all(l.count(subs.VERDE_ASS) == 1 for l in lineas)
+    texto = [l for l in ruta.read_text().splitlines() if l.startswith("Dialogue: 1")]
+    assert len(texto) == len(palabras)
+    assert all(sum(l.count("\\c" + c) for c in subs.COLORES_ASS) == 1 for l in texto)
+
+
+def test_el_inicio_se_ajusta_al_arranque_real_de_la_voz_y_nunca_hay_mas_de_cuatro():
+    palabras = subs.tiempos_palabras("", subs.leer_srt(SRT), 6.5)
+    tramos = subs.tramos_partidos(palabras, [], PARTIDOS, 6.5, arranques_voz=[0.31, 2.42, 4.02, 9.0])
+    assert len(tramos) == 4
+    assert [round(t[1], 2) for t in tramos[:3]] == [0.31, 2.42, 4.02]

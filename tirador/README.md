@@ -5,7 +5,20 @@ Un comando produce el vídeo vertical (1080x1920) del día con diseño fijo:
 1. **Capa 1** — Julen (avatar de HeyGen) arriba, sobre negro limpio, sin marcos.
 2. **Capa 2** — jugador estrella de uno de los ocho equipos, integrado en el fondo de estadio.
 3. **Capa 3** — cuatro casillas negras con borde verde neón, VS central, bandera/escudo y nombres en blanco.
-4. **Capa 4** — subtítulos palabra a palabra (la que suena, en verde), resalte del partido del que se habla y flash en cada cambio.
+4. **Capa 4** — subtítulos, resalte del partido del que se habla, flashes y clic de cámara.
+
+### ESTILO_SUBTITULOS_OFICIAL (`subs.py`)
+Montserrat ExtraBold, MAYÚSCULAS, contorno negro grueso, halo neón, entrada con zoom y movimiento,
+fragmentos de 1 a 3 palabras, palabra a palabra. La palabra que suena va en color vivo (turquesa, verde
+neón, rosa, amarillo, rotando por fragmento) y el resto en blanco. Posición: entre el vídeo de Julen y las
+casillas, sin tapar escudos ni partidos.
+
+### Flashes (`montaje.py`)
+Exactamente cuatro, uno por partido, en el instante en que Julen empieza a hablar de él: destello breve +
+clic de cámara + cambio de resalte, los tres en el mismo instante. No hay tiempos fijos: el inicio se
+localiza en el guion y se ajusta al arranque real de la voz medido en el audio. Nunca se adelantan al
+audio ni aparecen en frases intermedias; si el guion no permite localizar los 4 partidos en orden, el
+programa se detiene antes de gastar créditos.
 
 ## Uso diario
 

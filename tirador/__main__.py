@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import datos, heygen, montaje, plantilla, subs
+from . import datos, heygen, montaje, plantilla, sonido, subs
 from .equipos import Equipo, normalizar, resolver
 
 RAIZ = Path(__file__).resolve().parent
@@ -68,6 +68,11 @@ def generar(args) -> None:
         return
 
     texto, tramos_guion = subs.aplanar_guion(dia["guion"])
+    # antes de gastar créditos: el guion tiene que dejar claro dónde empieza cada partido
+    previo = subs.tramos_partidos(subs.tiempos_palabras(texto, [], 60.0), tramos_guion, partidos, 60.0)
+    if [i for i, _, _ in previo] != [0, 1, 2, 3]:
+        raise SystemExit("El guion no permite localizar los 4 partidos en orden (hacen falta 4 flashes, uno por "
+                         "partido). Escríbelo por bloques: intro / partidos x4 / cierre.")
     info_f = carpeta / "info.json"
     info = json.loads(info_f.read_text()) if info_f.exists() else {}
     cues = []
@@ -92,15 +97,15 @@ def generar(args) -> None:
 
     dur = montaje.duracion(video)
     palabras = subs.tiempos_palabras(texto, cues, dur)
-    tramos = subs.tramos_partidos(palabras, tramos_guion, partidos, dur)
-    if len(tramos) < 4:
-        print(f"AVISO: solo detecté {len(tramos)} de 4 partidos en el guion; usa el guion por bloques "
-              f"(intro / partidos / cierre) para que el resalte sea exacto.", file=sys.stderr)
+    tramos = subs.tramos_partidos(palabras, tramos_guion, partidos, dur, montaje.arranques_voz(video))
+    for idx, ini, _ in tramos:
+        print(f"  flash + clic  {ini:6.2f} s  →  {partidos[idx][0].nombre} - {partidos[idx][1].nombre}")
     if not cues:
         print("AVISO: sin SRT de HeyGen; los subtítulos van con tiempos estimados.", file=sys.stderr)
     ass = str(carpeta / "subtitulos.ass")
     subs.escribir_ass(palabras, ass)
-    final = montaje.montar(video, rutas, tramos, ass, str(carpeta / "final.mp4"))
+    final = montaje.montar(video, rutas, tramos, ass, str(carpeta / "final.mp4"),
+                           sonido.clic_camara(str(carpeta / "clic.wav")))
     print(f"LISTO: {final}  ({dur:.1f} s)")
 
 
