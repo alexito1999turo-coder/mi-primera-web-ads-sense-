@@ -67,6 +67,16 @@ def buscar_club(nombre: str) -> dict | None:
     return None
 
 
+def buscar_seleccion(nombre_ingles: str) -> dict | None:
+    from .equipos import normalizar
+    d = _json_cacheado(f"sel:{nombre_ingles}", f"{SPORTSDB}/searchteams.php", {"t": nombre_ingles}, horas=24 * 30)
+    for t in d.get("teams") or []:
+        if (t.get("strSport") == "Soccer" and t.get("strBadge") and t.get("strGender") == "Male"
+                and normalizar(t["strTeam"]) == normalizar(nombre_ingles)):
+            return t
+    return None
+
+
 def foto_jugador(nombre: str) -> tuple[str, bool] | None:
     """Devuelve (ruta, es_recorte). Prefiere el recorte con transparencia."""
     d = _json_cacheado(f"jug:{nombre}", f"{SPORTSDB}/searchplayers.php", {"p": nombre}, horas=24 * 7)

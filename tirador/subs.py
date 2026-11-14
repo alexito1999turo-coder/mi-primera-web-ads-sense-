@@ -10,7 +10,7 @@ from .equipos import normalizar
 # Colores vivos en formato ASS (BGR): turquesa, verde neón, rosa y amarillo; el resto en blanco.
 COLORES_ASS = ["&HFFE500&", "&H14FF39&", "&H962DFF&", "&H00E6FF&"]
 BLANCO_ASS = "&HFFFFFF&"
-SUB_Y = 1150              # entre el vídeo de Julen y las casillas, sin tapar escudos ni partidos
+SUB_Y = 1036              # entre el vídeo de Julen y las casillas, sin tapar escudos ni partidos
 MAX_LETRAS = 13           # por fragmento, para que nunca se salga del ancho
 
 

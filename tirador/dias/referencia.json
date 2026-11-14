@@ -1,0 +1,6 @@
+{
+  "fecha": "referencia",
+  "partidos": [["Bélgica", "Italia"], ["Francia", "Turquía"], ["España", "Inglaterra"], ["Croacia", "Chequia"]],
+  "estrella": "Lamine Yamal",
+  "guion": {"intro": "Hoy tenemos cuatro partidazos.", "partidos": ["Bélgica contra Italia.", "Francia contra Turquía.", "España contra Inglaterra.", "Croacia contra Chequia."], "cierre": "Sígueme."}
+}

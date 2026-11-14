@@ -26,7 +26,8 @@ def _config() -> dict:
 
 def _elegir_estrella(dia: dict, equipos: list[Equipo]) -> tuple[str | None, tuple[str, bool] | None]:
     if dia.get("foto_estrella"):
-        return dia.get("estrella"), (dia["foto_estrella"], dia.get("foto_es_recorte", True))
+        return dia.get("estrella"), (dia["foto_estrella"], dia.get("foto_es_recorte", True),
+                                     dia.get("foto_secundaria"), dia.get("foto_secundaria_es_recorte", True))
     if dia.get("estrella"):
         candidatos = [dia["estrella"]]
     else:

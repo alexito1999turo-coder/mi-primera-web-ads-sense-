@@ -14,3 +14,19 @@ Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Jule
 5. Entrega `tirador/salida/<fecha>/final.mp4` con SendUserFile. `salida/` y `cache/` no se suben a git.
 
 Detalles y límites en `tirador/README.md`. Tests: `python -m pytest tests/test_tirador_subs.py`.
+
+### Sistema visual oficial (contexto permanente, no preguntar por el estilo)
+
+«Hazme la plantilla / el vídeo de los partidos de mañana» significa siempre la plantilla oficial:
+negro profundo y verde neón/lima, estadio nocturno con focos, humo y haces de luz; arriba negro limpio
+para Julen; en el centro el jugador más destacado (retrato principal + secundario en verde oscuro);
+abajo cuatro casillas idénticas `ESCUDO — NOMBRE — VS — NOMBRE — ESCUDO` con pestaña «PARTIDOS DE HOY».
+Solo cambian: jugador, su segunda foto, los cuatro partidos y los ocho escudos/nombres. El diseño vive en
+`tirador/plantilla.py` y no se retoca día a día.
+
+- Escudos: siempre archivos auténticos (federación o club). Nunca generarlos ni recrearlos.
+- Jugador: comprobar convocatoria antes de elegirlo. La foto automática es tipo ficha y con camiseta de
+  club; el nivel «cinemático» de la referencia solo se alcanza si el usuario aporta `foto_estrella` y
+  `foto_secundaria` (PNG recortados). Decírselo si no las trae; no fingir que el resultado es equivalente.
+- Subtítulos: ESTILO_SUBTITULOS_OFICIAL. Flashes: cuatro, uno por partido, con clic de cámara.
+- No afirmar que algo es «idéntico» o «verificado» sin haber comparado la imagen con la referencia.

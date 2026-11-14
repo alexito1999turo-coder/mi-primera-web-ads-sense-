@@ -56,8 +56,9 @@ def normalizar(texto: str) -> str:
 class Equipo:
     nombre: str            # tal cual se pinta en la plantilla
     es_seleccion: bool
-    imagen: str            # ruta local de la bandera/escudo
+    imagen: str            # ruta local del escudo (o bandera de reserva)
     nombre_busqueda: str   # nombre en inglés / oficial para buscar plantilla
+    redonda: bool = False  # True solo si no hubo escudo y se usa la bandera
 
 
 def resolver(nombre: str, datos) -> Equipo:
@@ -65,8 +66,12 @@ def resolver(nombre: str, datos) -> Equipo:
     clave = normalizar(nombre)
     if clave in SELECCIONES:
         codigo, ingles = SELECCIONES[clave]
+        fed = datos.buscar_seleccion(ingles)       # escudo auténtico de la federación
+        if fed:
+            return Equipo(nombre, True, datos.descargar(fed["strBadge"], f"escudo_{fed['idTeam']}.png"), ingles)
+        print(f"  OJO: sin escudo de federación para «{nombre}»; uso la bandera.")
         ruta = datos.descargar(f"https://flagcdn.com/w640/{codigo}.png", f"bandera_{codigo}.png")
-        return Equipo(nombre, True, ruta, ingles)
+        return Equipo(nombre, True, ruta, ingles, redonda=True)
     club = datos.buscar_club(nombre)
     if not club:
         raise SystemExit(

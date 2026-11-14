@@ -36,7 +36,8 @@ Resultado en `tirador/salida/AAAA-MM-DD/final.mp4`.
 | `partidos` | sí | Exactamente 4 pares `["Local", "Visitante"]` |
 | `guion` | sí | Lo que dice Julen. Mejor por bloques: `{"intro", "partidos": [4 textos], "cierre"}`; así el resalte de cada casilla es exacto. También admite un texto único (se detecta la primera mención de cada equipo). |
 | `estrella` | recomendado | Nombre del jugador. Si falta se intenta calcular por visitas a Wikipedia, que falla a menudo desde servidores en la nube. |
-| `foto_estrella` | no | PNG propio (recortado, con transparencia) en lugar de la foto automática |
+| `foto_estrella` | no | PNG propio (recortado, con transparencia) para el retrato principal |
+| `foto_secundaria` | no | Segundo PNG del mismo jugador, otro ángulo; se pinta detrás en verde oscuro. Si falta, se usa la principal en espejo |
 | `escudos` | no | `{"Nombre": "ruta.png"}` para forzar un escudo |
 
 Otras opciones: `--video-id ID` reutiliza un vídeo de HeyGen ya pagado; `--avatar-video F.mp4 [--srt F.srt]`
@@ -50,7 +51,7 @@ Requisitos: Python 3.10+, `pillow`, `requests`, y `ffmpeg` con libass.
 
 ## Límites conocidos
 
-- **Selecciones**: banderas de flagcdn; la lista está en `equipos.py`.
+- **Selecciones**: escudo de la federación (TheSportsDB); si no existe, bandera de flagcdn. La lista está en `equipos.py`.
 - **Clubes**: escudo de TheSportsDB con clave gratuita, cuya búsqueda es pobre. Si el nombre no casa, el
   programa se detiene en vez de pintar un escudo ajeno: usa el nombre oficial (p. ej. «Real Betis») o `escudos`.
 - **Foto del jugador**: recorte de TheSportsDB, que suele ir con la camiseta del club, no de la selección.
