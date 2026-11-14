@@ -4,8 +4,8 @@ Gemini pinta SOLO el arte: doble retrato del jugador sobre el estadio. Casillas,
 nombres y escudos los compone plantilla.py, para que sean idénticos cada día y
 los escudos sean siempre archivos auténticos.
 
-SIN PROBAR contra la API real: está escrito según la documentación de noviembre
-de 2026 y falta ejecutarlo con una clave. La clave se lee de GEMINI_API_KEY (o la
+Petición validada por la API (noviembre de 2026); falta ver una imagen generada:
+la cuenta de prueba no tenía saldo. La clave se lee de GEMINI_API_KEY (o la
 inyecta el proxy del entorno en la nube).
 """
 from __future__ import annotations
@@ -51,8 +51,7 @@ def generar(jugador: str, equipo: str, salida: str, modelo: str = "gemini-3-pro-
         extra = "\nLas demás imágenes adjuntas son fotos reales del jugador: úsalas solo para clavar su parecido."
     cuerpo = {
         "model": modelo,
-        "generation_config": {"response_modalities": ["image"]},
-        "response_format": {"type": "image", "aspect_ratio": "16:9", "image_size": "2K", "mime_type": "image/png"},
+        "response_format": {"type": "image", "aspect_ratio": "16:9", "image_size": "2K", "mime_type": "image/jpeg"},
         "input": [{"type": "text", "text": PROMPT.format(jugador=jugador, equipo=equipo, extra=extra)}, *entradas],
     }
     r = requests.post(URL, json=cuerpo, timeout=300, headers={

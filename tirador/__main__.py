@@ -66,7 +66,7 @@ def generar(args) -> None:
         estrella = dia.get("estrella")
     elif dia.get("arte_gemini"):                    # arte por API: gasta saldo de Gemini
         estrella = dia.get("estrella") or sys.exit('Con "arte_gemini" hace falta "estrella".')
-        ruta_arte = str(carpeta / "arte.png")
+        ruta_arte = str(carpeta / "arte.jpg")
         if not Path(ruta_arte).exists():
             identidad = datos.foto_jugador(estrella)
             print("Generando arte con Gemini…")
