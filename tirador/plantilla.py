@@ -300,13 +300,30 @@ def _vs(img: Image.Image, cx: int, cy: int) -> None:
     img.alpha_composite(lleno)
 
 
-def generar(partidos: list[tuple], foto_jugador: tuple | None, carpeta: Path) -> dict:
+def _pegar_arte(img: Image.Image, ruta: str) -> None:
+    """Arte ya terminado (generado con IA o aportado): ocupa la zona del jugador y
+    se funde por abajo con el fondo fijo, tras la primera casilla."""
+    alto = CAJAS_Y + 90 - ZONA_Y
+    arte = ImageOps.fit(Image.open(ruta).convert("RGB"), (W, alto), Image.LANCZOS, centering=(0.5, 0.0)).convert("RGBA")
+    mascara = Image.new("L", (W, alto), 255)
+    md = ImageDraw.Draw(mascara)
+    for y in range(110):
+        md.line((0, alto - 110 + y, W, alto - 110 + y), fill=int(255 * (1 - y / 110)))
+    arte.putalpha(mascara)
+    img.alpha_composite(arte, (0, ZONA_Y))
+    _techo_negro(img)
+
+
+def generar(partidos: list[tuple], foto_jugador: tuple | None, carpeta: Path, arte: str | None = None) -> dict:
     """partidos: [(Equipo local, Equipo visitante)] x4.
+    arte: imagen cinemática completa del jugador (tiene prioridad).
     foto_jugador: (ruta, es_recorte[, ruta_secundaria, es_recorte_secundaria])."""
     carpeta.mkdir(parents=True, exist_ok=True)
     fondo = _fondo_estadio()
     img = fondo.copy()
-    if foto_jugador:
+    if arte:
+        _pegar_arte(img, arte)
+    elif foto_jugador:
         _pegar_jugador(img, *foto_jugador)
         corte = CAJAS_Y + 70          # el torso muere tras la primera casilla, no asoma entre ellas
         img.paste(fondo.crop((0, corte, W, H)), (0, corte))

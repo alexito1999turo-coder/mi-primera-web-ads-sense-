@@ -28,5 +28,8 @@ Solo cambian: jugador, su segunda foto, los cuatro partidos y los ocho escudos/n
 - Jugador: comprobar convocatoria antes de elegirlo. La foto automática es tipo ficha y con camiseta de
   club; el nivel «cinemático» de la referencia solo se alcanza si el usuario aporta `foto_estrella` y
   `foto_secundaria` (PNG recortados). Decírselo si no las trae; no fingir que el resultado es equivalente.
+- Arte del jugador: la vía buena es `"arte": "ruta.png"` (imagen 16:9 generada con IA a partir de
+  `tirador/referencia/maestra.png`, sin textos ni escudos). La IA solo pinta el arte; casillas, nombres y
+  escudos son siempre de `plantilla.py`. `arte_gemini` (API) está escrito pero sin probar: falta la clave.
 - Subtítulos: ESTILO_SUBTITULOS_OFICIAL. Flashes: cuatro, uno por partido, con clic de cámara.
 - No afirmar que algo es «idéntico» o «verificado» sin haber comparado la imagen con la referencia.

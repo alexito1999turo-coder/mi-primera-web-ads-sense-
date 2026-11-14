@@ -14,7 +14,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import datos, heygen, montaje, plantilla, sonido, subs
+from . import arte, datos, heygen, montaje, plantilla, sonido, subs
 from .equipos import Equipo, normalizar, resolver
 
 RAIZ = Path(__file__).resolve().parent
@@ -61,9 +61,21 @@ def generar(args) -> None:
             return Equipo(nombre, False, manuales[normalizar(nombre)], nombre)
         return resolver(nombre, datos)
     partidos = [(equipo(a), equipo(b)) for a, b in dia["partidos"]]
-    estrella, foto = _elegir_estrella(dia, [e for p in partidos for e in p])
+    ruta_arte, foto = dia.get("arte"), None
+    if ruta_arte:                                   # arte ya hecho (p. ej. en la app de Gemini)
+        estrella = dia.get("estrella")
+    elif dia.get("arte_gemini"):                    # arte por API: gasta saldo de Gemini
+        estrella = dia.get("estrella") or sys.exit('Con "arte_gemini" hace falta "estrella".')
+        ruta_arte = str(carpeta / "arte.png")
+        if not Path(ruta_arte).exists():
+            identidad = datos.foto_jugador(estrella)
+            print("Generando arte con Gemini…")
+            arte.generar(estrella, dia.get("equipo_estrella", ""), ruta_arte, cfg.get("modelo_arte", "gemini-3-pro-image"),
+                         [identidad[0]] if identidad else None)
+    else:
+        estrella, foto = _elegir_estrella(dia, [e for p in partidos for e in p])
     print(f"Jugador estrella: {estrella}")
-    rutas = plantilla.generar(partidos, foto, carpeta)
+    rutas = plantilla.generar(partidos, foto, carpeta, ruta_arte)
     print(f"Plantilla: {rutas['base']}")
     if args.solo_plantilla:
         return
