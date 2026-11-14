@@ -6,3 +6,5 @@ __pycache__/
 informe*.json
 informe*.md
 venv/
+tirador/salida/
+tirador/cache/

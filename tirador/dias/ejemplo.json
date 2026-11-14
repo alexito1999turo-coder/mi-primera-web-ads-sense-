@@ -1,0 +1,20 @@
+{
+  "fecha": "ejemplo",
+  "partidos": [
+    ["Países Bajos", "Grecia"],
+    ["Eslovenia", "Suiza"],
+    ["Serbia", "Alemania"],
+    ["Luxemburgo", "Estonia"]
+  ],
+  "estrella": "Jamal Musiala",
+  "guion": {
+    "intro": "Cuatro partidos de selecciones para hoy, vamos con ellos.",
+    "partidos": [
+      "Países Bajos recibe a Grecia y es clara favorita en casa.",
+      "Eslovenia contra Suiza, el partido más igualado de la jornada.",
+      "Serbia se mide a Alemania, que llega lanzada.",
+      "Y cerramos con Luxemburgo frente a Estonia."
+    ],
+    "cierre": "Sígueme para no perderte ninguno."
+  }
+}
