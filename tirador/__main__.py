@@ -1,6 +1,7 @@
 """Generador diario de vídeos de El Tirador.
 
     python -m tirador avatares                 lista tus avatares de HeyGen
+    python -m tirador partidos [AAAA-MM-DD]    propone los 4 partidos del día y crea el borrador
     python -m tirador tirador/dias/HOY.json    genera el vídeo del día
       --solo-plantilla        solo pinta la plantilla (gratis, no llama a HeyGen)
       --video-id ID           reutiliza un vídeo de HeyGen ya generado (no vuelve a cobrar)
@@ -14,7 +15,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import arte, datos, heygen, montaje, plantilla, sonido, subs
+from . import arte, datos, heygen, montaje, partidos as partidos_mod, plantilla, sonido, subs
 from .equipos import Equipo, normalizar, resolver
 
 RAIZ = Path(__file__).resolve().parent
@@ -124,12 +125,17 @@ def generar(args) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="tirador", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("dia", help="JSON del día, o la palabra 'avatares'")
+    ap.add_argument("dia", help="JSON del día, o las palabras 'avatares' / 'partidos'")
+    ap.add_argument("fecha", nargs="?", help="con 'partidos': AAAA-MM-DD (por defecto, hoy)")
     ap.add_argument("--solo-plantilla", action="store_true")
     ap.add_argument("--video-id")
     ap.add_argument("--avatar-video")
     ap.add_argument("--srt")
     args = ap.parse_args()
+    if args.dia == "partidos":
+        from datetime import date
+        partidos_mod.proponer(date.fromisoformat(args.fecha) if args.fecha else date.today(), RAIZ / "dias")
+        return
     if args.dia == "avatares":
         for a in heygen.listar_avatares():
             print(f"{a['id']}  voz={a.get('default_voice_id')}  {a.get('preferred_orientation')}  {a['name']}")

@@ -4,7 +4,9 @@
 
 Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Julen):
 
-1. Escribe `tirador/dias/AAAA-MM-DD.json` siguiendo `tirador/dias/ejemplo.json`. Guion por bloques
+1. Si el usuario no da los partidos: `python -m tirador partidos AAAA-MM-DD` propone los 4 con más tirón
+   (competición + clubes grandes) y crea el borrador; revísalo (la API gratuita da máx. 3 partidos por
+   competición y día). Si los da: escribe `tirador/dias/AAAA-MM-DD.json` siguiendo `tirador/dias/ejemplo.json`. Guion por bloques
    (`intro` / `partidos` x4 / `cierre`). Si el usuario no da guion, redáctalo y enséñaselo antes de gastar créditos.
 2. Elige tú `estrella`: el jugador más famoso entre los ocho equipos que esté convocado/disponible
    (verifícalo con una búsqueda; no te fíes de la memoria). Explica en una línea por qué ese.
@@ -33,3 +35,11 @@ Solo cambian: jugador, su segunda foto, los cuatro partidos y los ocho escudos/n
   escudos son siempre de `plantilla.py`. `arte_gemini` (API) está escrito pero sin probar: falta la clave.
 - Subtítulos: ESTILO_SUBTITULOS_OFICIAL. Flashes: cuatro, uno por partido, con clic de cámara.
 - No afirmar que algo es «idéntico» o «verificado» sin haber comparado la imagen con la referencia.
+
+### Formato que funciona en el nicho (medido en @winapicks y @pedrosure, nov 2026)
+- Un vídeo al día, título fijo «Predicciones DD mes fútbol» + 4-5 hashtags (#tiktokfutbol + competición + clubes).
+- 60-75 s. Estructura del guion: 1) gancho de acierto («mirad lo que dije ayer… lo acerté todo»),
+  2) un pick por partido, una o dos frases de motivo cada uno, 3) el partido gordo se deja sin pick y se
+  manda al grupo de la bio («el dato clave ya está en el grupo»). Eso convierte vistas en comunidad.
+- Los días de Champions y de selección grande rinden el doble (220-270 mil vistas frente a ~90 mil).
+- No afirmar aciertos que no hayan ocurrido: el gancho solo con resultados reales del día anterior.
