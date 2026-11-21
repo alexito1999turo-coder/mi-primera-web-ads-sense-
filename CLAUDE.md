@@ -2,7 +2,12 @@
 
 ## Vídeo diario de El Tirador (`tirador/`)
 
-Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Julen):
+Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Julen), o diga «panel listo»:
+
+0. Panel de control: https://claude.ai/artifact/GRvpHAG2fZ3fjK6a9cgCs4 (fuente: `tirador/panel/panel.html`).
+   Con «panel listo», lee `pedidos/<fecha>` con ArtifactData (estado `pendiente`): partidos, picks, partido
+   del grupo, gancho, estrella y guion ya escritos. Al empezar pon `estado: en_produccion`; al entregar,
+   `listo`. Respeta el guion tal cual; solo corrige erratas.
 
 1. Los 4 partidos los da siempre el usuario; no proponerlos. Escribe `tirador/dias/AAAA-MM-DD.json`
    siguiendo `tirador/dias/ejemplo.json`. Guion por bloques

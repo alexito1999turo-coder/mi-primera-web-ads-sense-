@@ -1,0 +1,602 @@
+<title>Panel El Tirador</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: una columna de pasos (partidos → gancho → estrella → guion → publicación → historial),
+   con la barra de envío fija abajo. Identidad de El Tirador: un solo tema, negro y verde neón. */
+:root {
+  --bg: #050806;
+  --panel: #0b120d;
+  --panel-2: #101a13;
+  --line: #1d2c21;
+  --line-2: #2b4231;
+  --fg: #eef5ef;
+  --muted: #8fa596;
+  --neon: #39ff14;
+  --neon-dim: #1f8f0e;
+  --lime: #beff3c;
+  --warn: #ffc83a;
+  --bad: #ff5a5f;
+  --ok: #39ff14;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body {
+  font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 120px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-block: 22px 6px; border-bottom: 1px solid var(--line); }
+.brand { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 40px; line-height: .9; letter-spacing: .5px; text-transform: uppercase; margin: 0; }
+.brand span { color: var(--neon); text-shadow: 0 0 18px rgba(57,255,20,.55); }
+.sub { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 12px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.borrador { color: var(--muted); }
+.chip.pendiente { color: var(--warn); }
+.chip.en_produccion { color: var(--lime); }
+.chip.listo, .chip.publicado { color: var(--ok); }
+
+section.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.step-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.step-h h2 { font-family: var(--display); font-weight: 700; font-size: 24px; text-transform: uppercase; letter-spacing: .6px; margin: 0; text-wrap: balance; }
+.step-h h2 b { color: var(--neon); font-weight: 700; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .3px; text-transform: uppercase; min-width: 0; }
+input, select, textarea {
+  font: inherit; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 70px; line-height: 1.45; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+.row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.row3 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 560px) { .row, .row3 { grid-template-columns: 1fr; } }
+
+.match { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--panel-2); }
+.match.grupo { border-color: var(--neon-dim); box-shadow: 0 0 0 1px rgba(57,255,20,.18) inset; }
+.match-top { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; }
+.vs { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 26px; color: var(--neon); text-shadow: 0 0 12px rgba(57,255,20,.6); padding-bottom: 6px; }
+.match-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.slot { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.radio { flex-direction: row; align-items: center; gap: 8px; text-transform: none; font-size: 13px; font-weight: 500; color: var(--fg); cursor: pointer; }
+.radio input { width: auto; accent-color: var(--neon); }
+.grupo-tag { color: var(--neon); font-weight: 600; }
+
+button { font: inherit; cursor: pointer; border-radius: 10px; padding: 10px 14px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--fg); font-weight: 600; }
+button:hover { border-color: var(--neon-dim); }
+button.primary { background: var(--neon); color: #031003; border-color: var(--neon); box-shadow: 0 0 18px rgba(57,255,20,.35); }
+button.primary:hover { background: var(--lime); }
+button.small { padding: 6px 10px; font-size: 13px; }
+button[disabled] { opacity: .45; cursor: not-allowed; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.meter { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.bar { flex: 1 1 160px; height: 8px; background: var(--bg); border: 1px solid var(--line-2); border-radius: 999px; position: relative; overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; background: var(--neon); border-radius: 999px; }
+.bar .zone { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--muted); border-right: 1px dashed var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--fg); }
+.num.warn { color: var(--warn); } .num.ok { color: var(--ok); }
+
+.block-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.edited { font-size: 11px; color: var(--warn); text-transform: uppercase; letter-spacing: .4px; }
+
+.copybox { background: var(--bg); border: 1px solid var(--line-2); border-radius: 10px; padding: 12px; font-size: 14px; white-space: pre-wrap; word-break: break-word; user-select: all; }
+
+/* mini plantilla */
+.mini { display: flex; flex-direction: column; gap: 7px; background: radial-gradient(120% 80% at 50% 0%, #0b3a10 0%, #020502 70%); border-radius: 12px; padding: 14px 10px; border: 1px solid var(--line); }
+.mini-star { text-align: center; font-family: var(--display); font-style: italic; font-weight: 800; font-size: 20px; text-transform: uppercase; color: var(--lime); letter-spacing: .5px; padding-bottom: 4px; }
+.mini-box { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6px; border: 2px solid var(--neon); border-radius: 12px; padding: 6px 10px; background: rgba(0,0,0,.82); box-shadow: 0 0 10px rgba(57,255,20,.45), 0 0 2px rgba(57,255,20,.9) inset; }
+.mini-box span { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 17px; text-transform: uppercase; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.mini-box span:first-child { text-align: right; }
+.mini-box b { font-family: var(--display); font-style: italic; font-weight: 800; color: var(--neon); font-size: 19px; }
+
+/* historial */
+.hist { display: flex; flex-direction: column; gap: 10px; }
+.hday { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--panel-2); display: flex; flex-direction: column; gap: 8px; }
+.hday-h { display: flex; justify-content: space-between; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hday-h strong { font-family: var(--mono); font-size: 13px; }
+.pick { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
+.pick small { color: var(--muted); display: block; }
+.res { display: flex; gap: 4px; }
+.res button { padding: 4px 9px; font-size: 13px; min-width: 34px; }
+.res button.on.acierto { background: var(--ok); color: #031003; border-color: var(--ok); }
+.res button.on.fallo { background: var(--bad); color: #1a0202; border-color: var(--bad); }
+.res button.on.nulo { background: var(--line-2); }
+.racha { font-family: var(--display); font-weight: 700; font-size: 20px; text-transform: uppercase; }
+.racha .num { font-size: 18px; }
+
+.notice { border: 1px solid var(--line-2); border-left: 3px solid var(--warn); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--fg); background: var(--panel-2); }
+.notice.ok { border-left-color: var(--ok); }
+.empty { color: var(--muted); font-size: 14px; padding: 6px 2px; }
+
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: rgba(5,8,6,.94); backdrop-filter: blur(8px); border-top: 1px solid var(--line-2);
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.dock-in { max-width: 760px; margin: 0 auto; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.dock-msg { font-size: 13px; color: var(--muted); min-width: 0; flex: 1 1 200px; }
+.dock-msg.err { color: var(--bad); } .dock-msg.good { color: var(--ok); }
+@media (prefers-reduced-motion: no-preference) { button { transition: background .15s, border-color .15s; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 class="brand">El <span>Tirador</span></h1>
+      <p class="sub">Panel diario · rellénalo desde el móvil y pulsa «Enviar a producción»</p>
+    </div>
+    <span id="estadoChip" class="chip borrador">Borrador</span>
+  </header>
+
+  <div id="dbNotice" class="notice" hidden></div>
+
+  <section class="step" aria-labelledby="h-partidos">
+    <div class="step-h">
+      <h2 id="h-partidos">Partidos <b>de hoy</b></h2>
+      <label style="flex-direction:row;align-items:center;gap:8px">Día <input id="fecha" type="date" style="width:auto"></label>
+    </div>
+    <p class="hint">Escribe los equipos tal cual quieres que salgan en la plantilla. Marca un partido como <span class="grupo-tag">«del grupo»</span>: Julen no da su pronóstico en el vídeo y manda a la bio, como hace @winapicks.</p>
+    <div id="matches" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
+
+  <section class="step" aria-labelledby="h-gancho">
+    <div class="step-h"><h2 id="h-gancho">Gancho <b>de acierto</b></h2></div>
+    <p class="hint">Es lo primero que dice Julen. Solo con aciertos reales: se calcula del historial de abajo cuando marcas los resultados.</p>
+    <div id="ganchoSug" class="notice" hidden></div>
+    <label for="gancho">Frase de apertura
+      <textarea id="gancho" rows="2" placeholder="Ej.: Mirad lo que dije ayer: cuatro de cuatro."></textarea>
+    </label>
+  </section>
+
+  <section class="step" aria-labelledby="h-estrella">
+    <div class="step-h"><h2 id="h-estrella">Jugador <b>estrella</b></h2></div>
+    <p class="hint">Uno de los ocho equipos. Si lo dejas vacío, lo elige Claude comprobando que esté convocado.</p>
+    <div class="row">
+      <label for="estrella">Jugador <input id="estrella" type="text" placeholder="Vacío = lo elige Claude" autocomplete="off"></label>
+      <label for="equipoEstrella">Su equipo hoy <select id="equipoEstrella"><option value="">—</option></select></label>
+    </div>
+    <div class="mini" aria-label="Vista previa de la plantilla">
+      <div class="mini-star" id="miniStar">Jugador estrella</div>
+      <div id="miniBoxes" style="display:flex;flex-direction:column;gap:7px"></div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="h-guion">
+    <div class="step-h">
+      <h2 id="h-guion">Guion <b>de Julen</b></h2>
+      <button class="small" id="regenerar" type="button">Regenerar todo</button>
+    </div>
+    <p class="hint">Se escribe solo con lo que pones arriba. Puedes retocar cada bloque; los bloques retocados ya no se sobrescriben.</p>
+    <div class="meter">
+      <span>Duración estimada <span id="dur" class="num">0 s</span></span>
+      <div class="bar" aria-hidden="true"><div class="zone" style="left:66.6%;width:16.7%"></div><i id="durBar" style="width:0%"></i></div>
+      <span><span id="palabras" class="num">0</span> palabras · objetivo 60–75 s</span>
+    </div>
+    <div id="bloques" style="display:flex;flex-direction:column;gap:12px"></div>
+  </section>
+
+  <section class="step" aria-labelledby="h-pub">
+    <div class="step-h"><h2 id="h-pub">Texto <b>para TikTok</b></h2><button class="small" id="copiarTitulo" type="button">Copiar</button></div>
+    <p class="hint">Mismo formato que las cuentas que funcionan: título con la fecha y 4–5 hashtags.</p>
+    <div id="titulo" class="copybox"></div>
+  </section>
+
+  <section class="step" aria-labelledby="h-hist">
+    <div class="step-h">
+      <h2 id="h-hist">Historial <b>y racha</b></h2>
+      <span class="racha">Racha real <span id="racha" class="num">—</span></span>
+    </div>
+    <p class="hint">Marca cada pronóstico cuando termine el partido. El gancho del día siguiente sale de aquí.</p>
+    <div id="hist" class="hist"><p class="empty">Cargando historial…</p></div>
+  </section>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <span id="dockMsg" class="dock-msg">Rellena los cuatro partidos.</span>
+    <div class="btns">
+      <button id="guardar" type="button">Guardar borrador</button>
+      <button id="enviar" class="primary" type="button">Enviar a producción</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const COMPETICIONES = ["LaLiga","Premier League","Champions League","Europa League","Conference League","Serie A","Bundesliga","Ligue 1","Nations League","Copa del Rey","Mundial","Eurocopa","Otra"];
+  const HASHTAG_COMP = {"LaLiga":"#laliga","Premier League":"#premierleague","Champions League":"#championsleague","Europa League":"#europaleague","Conference League":"#conferenceleague","Serie A":"#seriea","Bundesliga":"#bundesliga","Ligue 1":"#ligue1","Nations League":"#nationsleague","Copa del Rey":"#copadelrey","Mundial":"#mundial2026","Eurocopa":"#eurocopa"};
+  const PALABRAS_POR_SEG = 2.6;
+
+  function hoy() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function vacio() {
+    return {
+      fecha: hoy(), estado: "borrador", grupo: 2,
+      partidos: [0,1,2,3].map(() => ({ local: "", visitante: "", competicion: "LaLiga", pick: "", motivo: "" })),
+      gancho: "", estrella: "", equipo_estrella: "",
+      guion: { intro: "", partidos: ["", "", "", ""], cierre: "" },
+      editado: { intro: false, partidos: [false, false, false, false], cierre: false },
+      resultados: [null, null, null, null],
+    };
+  }
+
+  let st = vacio();
+  let db = null;
+  let historial = [];   // pedidos guardados, más reciente primero
+  let ultimoGuardado = "";
+
+  // ---------- guion automático (estructura del nicho) ----------
+  const limpio = (s) => (s || "").trim().replace(/\s+/g, " ");
+  const punto = (s) => { s = limpio(s); return s && !/[.!?…]$/.test(s) ? s + "." : s; };
+  function nombrePartido(p) { return limpio(p.local) && limpio(p.visitante) ? limpio(p.local) + " contra " + limpio(p.visitante) : "este partido"; }
+
+  function autoIntro() {
+    const g = st.partidos[st.grupo];
+    const gordo = limpio(g.local) && limpio(g.visitante) ? limpio(g.local) + " – " + limpio(g.visitante) : "el partido gordo";
+    const gancho = punto(st.gancho);
+    return (gancho ? gancho + " " : "") + "Hoy tenemos cuatro partidazos, y en " + gordo + " hay un dato clave que tenéis que saber. Vamos con ellos.";
+  }
+  function autoPartido(i) {
+    const p = st.partidos[i];
+    if (i === st.grupo) {
+      return nombrePartido(p) + ". Como os dije, aquí hay un dato clave, y como me gusta premiar a los que me seguís, ya lo he dejado en el grupo de mi perfil. Toca mi foto y en la bio lo tienes.";
+    }
+    const motivo = punto(p.motivo);
+    const pick = limpio(p.pick);
+    return nombrePartido(p) + ". " + (motivo ? motivo + " " : "") + (pick ? "Yo voy con " + pick.replace(/[.]$/, "") + "." : "Mi pronóstico: (falta el pick).");
+  }
+  function autoCierre() { return "Sígueme para no perderte los pronósticos de mañana."; }
+
+  function regenerarNoEditados(forzar) {
+    if (forzar || !st.editado.intro) st.guion.intro = autoIntro();
+    for (let i = 0; i < 4; i++) if (forzar || !st.editado.partidos[i]) st.guion.partidos[i] = autoPartido(i);
+    if (forzar || !st.editado.cierre) st.guion.cierre = autoCierre();
+    if (forzar) st.editado = { intro: false, partidos: [false, false, false, false], cierre: false };
+  }
+
+  // ---------- render ----------
+  function renderMatches() {
+    const cont = $("matches");
+    cont.textContent = "";
+    st.partidos.forEach((p, i) => {
+      const box = document.createElement("div");
+      box.className = "match" + (i === st.grupo ? " grupo" : "");
+      box.innerHTML =
+        '<div class="match-meta"><span class="slot">PARTIDO ' + (i + 1) + '</span>' +
+        '<label class="radio"><input type="radio" name="grupo" id="grupo' + i + '" value="' + i + '"> Dato al grupo</label></div>' +
+        '<div class="match-top">' +
+          '<label for="local' + i + '">Local<input id="local' + i + '" type="text" autocomplete="off" placeholder="Ej.: España"></label>' +
+          '<span class="vs" aria-hidden="true">VS</span>' +
+          '<label for="visit' + i + '">Visitante<input id="visit' + i + '" type="text" autocomplete="off" placeholder="Ej.: Inglaterra"></label>' +
+        '</div>' +
+        '<div class="row">' +
+          '<label for="comp' + i + '">Competición<select id="comp' + i + '"></select></label>' +
+          '<label for="pick' + i + '">Pronóstico<input id="pick' + i + '" type="text" autocomplete="off" placeholder="Ej.: victoria de España"></label>' +
+        '</div>' +
+        '<label for="motivo' + i + '">Motivo (una frase)<input id="motivo' + i + '" type="text" autocomplete="off" placeholder="Ej.: en casa son muy superiores"></label>';
+      cont.appendChild(box);
+      const sel = $("comp" + i);
+      COMPETICIONES.forEach((c) => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+      $("local" + i).value = p.local; $("visit" + i).value = p.visitante; sel.value = p.competicion || "LaLiga";
+      $("pick" + i).value = p.pick; $("motivo" + i).value = p.motivo; $("grupo" + i).checked = i === st.grupo;
+      const esGrupo = i === st.grupo;
+      $("pick" + i).disabled = esGrupo; $("motivo" + i).disabled = esGrupo;
+      if (esGrupo) { $("pick" + i).placeholder = "Va al grupo, no se dice"; $("motivo" + i).placeholder = "Va al grupo, no se dice"; }
+      const on = (id, campo) => $(id).addEventListener("input", (e) => { st.partidos[i][campo] = e.target.value; cambio(); });
+      on("local" + i, "local"); on("visit" + i, "visitante"); on("pick" + i, "pick"); on("motivo" + i, "motivo");
+      sel.addEventListener("change", (e) => { st.partidos[i].competicion = e.target.value; cambio(); });
+      $("grupo" + i).addEventListener("change", () => { st.grupo = i; renderMatches(); cambio(); });
+    });
+  }
+
+  function renderBloques() {
+    const cont = $("bloques");
+    if (!cont.childElementCount) {
+      const defs = [["intro", "Apertura"]].concat([0,1,2,3].map((i) => ["p" + i, "Partido " + (i + 1)])).concat([["cierre", "Cierre"]]);
+      defs.forEach(([key, nombre]) => {
+        const w = document.createElement("div");
+        w.innerHTML = '<div class="block-h"><label for="g_' + key + '" style="flex-direction:row">' + nombre + '</label><span class="edited" id="e_' + key + '" hidden>Retocado</span></div>' +
+          '<textarea id="g_' + key + '" rows="3"></textarea>';
+        cont.appendChild(w);
+        $("g_" + key).addEventListener("input", (e) => {
+          const v = e.target.value;
+          if (key === "intro") { st.guion.intro = v; st.editado.intro = true; }
+          else if (key === "cierre") { st.guion.cierre = v; st.editado.cierre = true; }
+          else { const i = +key.slice(1); st.guion.partidos[i] = v; st.editado.partidos[i] = true; }
+          cambio(true);
+        });
+      });
+    }
+    const set = (key, v, ed) => { const t = $("g_" + key); if (document.activeElement !== t) t.value = v; $("e_" + key).hidden = !ed; };
+    set("intro", st.guion.intro, st.editado.intro);
+    for (let i = 0; i < 4; i++) set("p" + i, st.guion.partidos[i], st.editado.partidos[i]);
+    set("cierre", st.guion.cierre, st.editado.cierre);
+    for (let i = 0; i < 4; i++) {
+      const l = $("g_p" + i).closest("div").querySelector("label");
+      const p = st.partidos[i];
+      l.textContent = "Partido " + (i + 1) + (limpio(p.local) ? " · " + limpio(p.local) + " – " + limpio(p.visitante) : "") + (i === st.grupo ? " · grupo" : "");
+    }
+    const texto = [st.guion.intro].concat(st.guion.partidos, [st.guion.cierre]).join(" ");
+    const n = (texto.match(/\S+/g) || []).length;
+    const seg = Math.round(n / PALABRAS_POR_SEG);
+    $("palabras").textContent = n;
+    const d = $("dur");
+    d.textContent = seg + " s";
+    d.className = "num " + (seg >= 60 && seg <= 75 ? "ok" : "warn");
+    $("durBar").style.width = Math.min(100, seg / 90 * 100) + "%";
+  }
+
+  function renderEstrella() {
+    const sel = $("equipoEstrella");
+    const actual = st.equipo_estrella;
+    sel.textContent = "";
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "—"; sel.appendChild(o0);
+    st.partidos.forEach((p) => [p.local, p.visitante].forEach((t) => {
+      t = limpio(t); if (!t) return;
+      const o = document.createElement("option"); o.value = t; o.textContent = t; sel.appendChild(o);
+    }));
+    sel.value = actual;
+    if (document.activeElement !== $("estrella")) $("estrella").value = st.estrella;
+    $("miniStar").textContent = limpio(st.estrella) || "Jugador estrella";
+    const mb = $("miniBoxes");
+    mb.textContent = "";
+    st.partidos.forEach((p) => {
+      const b = document.createElement("div"); b.className = "mini-box";
+      const a = document.createElement("span"); a.textContent = limpio(p.local) || "Local";
+      const v = document.createElement("b"); v.textContent = "VS";
+      const c = document.createElement("span"); c.textContent = limpio(p.visitante) || "Visitante";
+      b.append(a, v, c); mb.appendChild(b);
+    });
+  }
+
+  function tituloTikTok() {
+    const [y, m, d] = st.fecha.split("-").map(Number);
+    const comps = [...new Set(st.partidos.map((p) => p.competicion))];
+    const nombreComp = comps.length === 1 && comps[0] !== "Otra" ? comps[0] : "fútbol";
+    const tags = ["#tiktokfutbol"];
+    comps.forEach((c) => { if (HASHTAG_COMP[c] && tags.length < 3) tags.push(HASHTAG_COMP[c]); });
+    st.partidos.forEach((p) => [p.local, p.visitante].forEach((t) => {
+      const h = "#" + limpio(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
+      if (h.length > 2 && tags.length < 5 && !tags.includes(h)) tags.push(h);
+    }));
+    return "Predicciones " + (d || "") + " " + (MESES[(m || 1) - 1]) + " " + nombreComp + "  " + tags.join(" ");
+  }
+
+  function renderTitulo() { $("titulo").textContent = tituloTikTok(); }
+
+  function renderEstado() {
+    const c = $("estadoChip");
+    const nombres = { borrador: "Borrador", pendiente: "Enviado · pendiente", en_produccion: "En producción", listo: "Vídeo listo", publicado: "Publicado" };
+    c.className = "chip " + st.estado;
+    c.textContent = nombres[st.estado] || st.estado;
+  }
+
+  function faltan() {
+    const f = [];
+    st.partidos.forEach((p, i) => {
+      if (!limpio(p.local) || !limpio(p.visitante)) f.push("equipos del partido " + (i + 1));
+      else if (i !== st.grupo && !limpio(p.pick)) f.push("pronóstico del partido " + (i + 1));
+    });
+    return f;
+  }
+
+  function renderDock(msg, tipo) {
+    const m = $("dockMsg");
+    if (msg) { m.textContent = msg; m.className = "dock-msg " + (tipo || ""); return; }
+    const f = faltan();
+    m.className = "dock-msg";
+    m.textContent = f.length ? "Falta: " + f.slice(0, 2).join(", ") + (f.length > 2 ? "…" : "") : "Listo para enviar a producción.";
+    $("enviar").disabled = !db;
+    $("guardar").disabled = !db;
+  }
+
+  function cambio(soloGuion) {
+    if (!soloGuion) regenerarNoEditados(false);
+    renderBloques(); renderEstrella(); renderTitulo(); renderDock();
+  }
+
+  // ---------- historial, resultados y racha (solo datos reales) ----------
+  function rachaReal() {
+    // pronósticos resueltos, del más reciente al más antiguo, saltando los del grupo y los nulos
+    let n = 0;
+    for (const p of historial) {
+      if (!p.resultados) continue;
+      for (let i = 3; i >= 0; i--) {
+        if (i === p.grupo) continue;
+        const r = p.resultados[i];
+        if (r === "acierto") n++;
+        else if (r === "fallo") return n;
+      }
+    }
+    return n;
+  }
+
+  function sugerirGancho() {
+    const box = $("ganchoSug");
+    const prev = historial.find((p) => p.fecha < st.fecha && p.resultados && p.resultados.some((r) => r));
+    if (!prev) { box.hidden = true; return; }
+    const idx = [0,1,2,3].filter((i) => i !== prev.grupo && prev.resultados[i] && prev.resultados[i] !== "nulo");
+    const ac = idx.filter((i) => prev.resultados[i] === "acierto").length;
+    if (!idx.length) { box.hidden = true; return; }
+    let frase;
+    if (ac === idx.length) frase = "Mirad lo que dije en el último vídeo: " + ac + " de " + idx.length + ", lo acerté todo.";
+    else if (ac >= Math.ceil(idx.length / 2)) frase = "En el último vídeo acerté " + ac + " de " + idx.length + ".";
+    else frase = "";
+    box.hidden = false;
+    box.className = "notice" + (frase ? " ok" : "");
+    box.textContent = "";
+    const t = document.createElement("span");
+    t.textContent = frase ? "Según tu historial (" + prev.fecha + "): «" + frase + "» " : "Ayer (" + prev.fecha + ") acertaste " + ac + " de " + idx.length + ". Mejor no abrir con la racha hoy.";
+    box.appendChild(t);
+    if (frase) {
+      const b = document.createElement("button"); b.className = "small"; b.type = "button"; b.textContent = "Usar esta frase";
+      b.addEventListener("click", () => { st.gancho = frase; $("gancho").value = frase; cambio(); });
+      box.appendChild(b);
+    }
+  }
+
+  function renderHist() {
+    const cont = $("hist");
+    cont.textContent = "";
+    $("racha").textContent = historial.length ? rachaReal() : "—";
+    if (!db) { cont.innerHTML = '<p class="empty">El historial necesita abrir el panel con tu cuenta de Claude.</p>'; return; }
+    if (!historial.length) { cont.innerHTML = '<p class="empty">Aún no hay días guardados. Cuando envíes el primero aparecerá aquí para marcar si acertaste.</p>'; return; }
+    historial.slice(0, 14).forEach((p) => {
+      const d = document.createElement("div"); d.className = "hday";
+      const h = document.createElement("div"); h.className = "hday-h";
+      const s = document.createElement("strong"); s.textContent = p.fecha;
+      const chip = document.createElement("span"); chip.className = "chip " + (p.estado || "borrador");
+      chip.textContent = ({ borrador: "Borrador", pendiente: "Pendiente", en_produccion: "En producción", listo: "Vídeo listo", publicado: "Publicado" })[p.estado] || p.estado;
+      const ab = document.createElement("button"); ab.className = "small"; ab.type = "button"; ab.textContent = "Abrir";
+      ab.addEventListener("click", () => { cargar(p); window.scrollTo({ top: 0, behavior: "smooth" }); });
+      h.append(s, chip, ab); d.appendChild(h);
+      (p.partidos || []).forEach((m, i) => {
+        const row = document.createElement("div"); row.className = "pick";
+        const txt = document.createElement("div");
+        txt.textContent = (m.local || "?") + " – " + (m.visitante || "?");
+        const sm = document.createElement("small"); sm.textContent = i === p.grupo ? "Dato en el grupo" : (m.pick || "sin pronóstico");
+        txt.appendChild(sm);
+        const res = document.createElement("div"); res.className = "res";
+        [["acierto", "✓", "Acierto"], ["fallo", "✗", "Fallo"], ["nulo", "–", "Nulo"]].forEach(([v, sym, nom]) => {
+          const b = document.createElement("button"); b.type = "button"; b.className = v + ((p.resultados || [])[i] === v ? " on" : "");
+          b.textContent = sym; b.setAttribute("aria-label", nom + " en " + (m.local || "") + " – " + (m.visitante || ""));
+          b.addEventListener("click", () => marcar(p, i, (p.resultados || [])[i] === v ? null : v));
+          res.appendChild(b);
+        });
+        row.append(txt, res); d.appendChild(row);
+      });
+      cont.appendChild(d);
+    });
+  }
+
+  async function marcar(p, i, v) {
+    const r = (p.resultados || [null, null, null, null]).slice(); r[i] = v;
+    try {
+      await db.doc("pedidos/" + p.fecha).update({ resultados: r });
+    } catch (e) { renderDock("No se pudo guardar el resultado: " + (e && e.message || "error"), "err"); }
+  }
+
+  // ---------- persistencia ----------
+  function cuerpo(estado) {
+    const texto = [st.guion.intro].concat(st.guion.partidos, [st.guion.cierre]).map(limpio).join(" ");
+    return {
+      fecha: st.fecha, estado, grupo: st.grupo,
+      partidos: st.partidos.map((p) => ({ local: limpio(p.local), visitante: limpio(p.visitante), competicion: p.competicion, pick: limpio(p.pick), motivo: limpio(p.motivo) })),
+      gancho: limpio(st.gancho), estrella: limpio(st.estrella), equipo_estrella: st.equipo_estrella,
+      guion: { intro: limpio(st.guion.intro), partidos: st.guion.partidos.map(limpio), cierre: limpio(st.guion.cierre) },
+      editado: st.editado,
+      palabras: (texto.match(/\S+/g) || []).length,
+      titulo_tiktok: tituloTikTok(),
+      resultados: st.resultados || [null, null, null, null],
+      actualizado: new Date().toISOString(),
+    };
+  }
+
+  let guardando = false;
+  async function guardar(estado) {
+    if (!db || guardando) return;
+    if (estado === "pendiente") {
+      const f = faltan();
+      if (f.length) { renderDock("No se envía todavía. Falta: " + f.join(", ") + ".", "err"); return; }
+    }
+    guardando = true;
+    const b = cuerpo(estado);
+    try {
+      await db.doc("pedidos/" + st.fecha).set(b);
+      st.estado = estado; renderEstado();
+      ultimoGuardado = JSON.stringify(b.partidos) + b.guion.intro;
+      renderDock(estado === "pendiente" ? "Enviado. Dile a Claude «panel listo» y se pone a producir el vídeo." : "Borrador guardado.", "good");
+    } catch (e) {
+      renderDock(e && e.code === "invalid_argument" ? "Tu cuenta no puede guardar en este panel." : "No se pudo guardar. Prueba otra vez en unos segundos.", "err");
+    } finally { guardando = false; }
+  }
+
+  function cargar(p) {
+    const base = vacio();
+    st = Object.assign(base, JSON.parse(JSON.stringify(p)));
+    if (!st.editado) st.editado = base.editado;
+    if (!st.resultados) st.resultados = [null, null, null, null];
+    $("fecha").value = st.fecha; $("gancho").value = st.gancho || "";
+    renderMatches(); renderEstado(); cambio(true); sugerirGancho();
+  }
+
+  // ---------- eventos de la página ----------
+  $("fecha").value = st.fecha;
+  $("fecha").addEventListener("change", (e) => {
+    const f = e.target.value; if (!f) return;
+    const ya = historial.find((p) => p.fecha === f);
+    if (ya) cargar(ya); else { st.fecha = f; st.estado = "borrador"; renderEstado(); sugerirGancho(); cambio(); }
+  });
+  $("gancho").addEventListener("input", (e) => { st.gancho = e.target.value; cambio(); });
+  $("estrella").addEventListener("input", (e) => { st.estrella = e.target.value; renderEstrella(); });
+  $("equipoEstrella").addEventListener("change", (e) => { st.equipo_estrella = e.target.value; });
+  $("regenerar").addEventListener("click", () => { regenerarNoEditados(true); cambio(true); });
+  $("guardar").addEventListener("click", () => guardar(st.estado === "borrador" ? "borrador" : st.estado));
+  $("enviar").addEventListener("click", () => guardar("pendiente"));
+  $("copiarTitulo").addEventListener("click", async () => {
+    const t = tituloTikTok();
+    try { await navigator.clipboard.writeText(t); renderDock("Texto copiado.", "good"); }
+    catch (_) {
+      const r = document.createRange(); r.selectNodeContents($("titulo"));
+      const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      renderDock("Texto seleccionado: cópialo con el menú del móvil.");
+    }
+  });
+
+  // ejemplo inicial, marcado como ejemplo, para que el panel no arranque vacío
+  st.partidos = [
+    { local: "Bélgica", visitante: "Italia", competicion: "Nations League", pick: "más de 1,5 goles", motivo: "Los dos llegan marcando mucho" },
+    { local: "Francia", visitante: "Turquía", competicion: "Nations League", pick: "victoria de Francia", motivo: "En casa y obligada a ganar" },
+    { local: "España", visitante: "Inglaterra", competicion: "Nations League", pick: "", motivo: "" },
+    { local: "Croacia", visitante: "Chequia", competicion: "Nations League", pick: "victoria de Croacia", motivo: "Ha mejorado y juega en casa" },
+  ];
+  st.estrella = "";
+  regenerarNoEditados(true);
+  renderMatches(); renderEstado(); cambio(true); renderHist();
+  renderDock("Ejemplo cargado: cámbialo por los partidos de hoy.");
+  $("enviar").disabled = true; $("guardar").disabled = true;
+
+  // ---------- conexión con el almacén ----------
+  const aviso = $("dbNotice");
+  const timer = setTimeout(() => { aviso.hidden = false; aviso.textContent = "Conectando con el almacén… si tarda, revisa la conexión."; }, 10000);
+  (async () => {
+    try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (_) { db = null; }
+    if (!db) {
+      clearTimeout(timer);
+      aviso.hidden = false;
+      aviso.textContent = "Abre el panel con tu cuenta de Claude para guardar y enviar. Sin conexión puedes rellenarlo, pero no se envía.";
+      renderHist(); renderDock();
+      return;
+    }
+    renderDock("Ejemplo cargado: cámbialo por los partidos de hoy.");
+    $("enviar").disabled = false; $("guardar").disabled = false;
+    db.collection("pedidos").orderBy("fecha", "desc").limit(60).onSnapshot((snap) => {
+      if (!snap.metadata.fromCache) { clearTimeout(timer); aviso.hidden = true; }
+      historial = snap.docs.filter((d) => d.exists).map((d) => d.data());
+      const actual = historial.find((p) => p.fecha === st.fecha);
+      if (actual && actual.estado !== st.estado) { st.estado = actual.estado; renderEstado(); }
+      if (actual) st.resultados = actual.resultados || st.resultados;
+      renderHist(); sugerirGancho();
+    }, (e) => {
+      clearTimeout(timer);
+      aviso.hidden = false;
+      aviso.textContent = "No se pudo leer el historial (" + (e && e.code || "error") + "). Recarga el panel más tarde.";
+    });
+  })();
+})();
+</script>
