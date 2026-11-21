@@ -4,9 +4,8 @@
 
 Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Julen):
 
-1. Si el usuario no da los partidos: `python -m tirador partidos AAAA-MM-DD` propone los 4 con más tirón
-   (competición + clubes grandes) y crea el borrador; revísalo (la API gratuita da máx. 3 partidos por
-   competición y día). Si los da: escribe `tirador/dias/AAAA-MM-DD.json` siguiendo `tirador/dias/ejemplo.json`. Guion por bloques
+1. Los 4 partidos los da siempre el usuario; no proponerlos. Escribe `tirador/dias/AAAA-MM-DD.json`
+   siguiendo `tirador/dias/ejemplo.json`. Guion por bloques
    (`intro` / `partidos` x4 / `cierre`). Si el usuario no da guion, redáctalo y enséñaselo antes de gastar créditos.
 2. Elige tú `estrella`: el jugador más famoso entre los ocho equipos que esté convocado/disponible
    (verifícalo con una búsqueda; no te fíes de la memoria). Explica en una línea por qué ese.
