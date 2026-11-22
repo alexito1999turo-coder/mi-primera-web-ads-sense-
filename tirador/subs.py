@@ -169,7 +169,8 @@ def fragmentar(palabras) -> list[list]:
     return grupos
 
 
-def escribir_ass(palabras, ruta: str, fuente: str = "Montserrat ExtraBold") -> None:
+def escribir_ass(palabras, ruta: str, fuente: str = "Montserrat ExtraBold", y: int | None = None) -> None:
+    SUB_Y = y if y is not None else globals()["SUB_Y"]
     cab = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080

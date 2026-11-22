@@ -58,12 +58,16 @@ def generar(args) -> None:
 
     manuales = {normalizar(k): v for k, v in (dia.get("escudos") or {}).items()}
     def equipo(nombre: str) -> Equipo:
+        if dia.get("plantilla_imagen"):          # los escudos ya vienen pintados en la imagen
+            return Equipo(nombre, False, "", nombre)
         if normalizar(nombre) in manuales:
             return Equipo(nombre, False, manuales[normalizar(nombre)], nombre)
         return resolver(nombre, datos)
     partidos = [(equipo(a), equipo(b)) for a, b in dia["partidos"]]
     ruta_arte, foto = dia.get("arte"), None
-    if ruta_arte:                                   # arte ya hecho (p. ej. en la app de Gemini)
+    if dia.get("plantilla_imagen"):                 # plantilla completa hecha fuera (ChatGPT)
+        estrella = dia.get("estrella") or "(en la imagen)"
+    elif ruta_arte:                                   # arte ya hecho (p. ej. en la app de Gemini)
         estrella = dia.get("estrella")
     elif dia.get("arte_gemini"):                    # arte por API: gasta saldo de Gemini
         estrella = dia.get("estrella") or sys.exit('Con "arte_gemini" hace falta "estrella".')
@@ -76,7 +80,13 @@ def generar(args) -> None:
     else:
         estrella, foto = _elegir_estrella(dia, [e for p in partidos for e in p])
     print(f"Jugador estrella: {estrella}")
-    rutas = plantilla.generar(partidos, foto, carpeta, ruta_arte)
+    if dia.get("plantilla_imagen"):
+        rutas = plantilla.desde_imagen(dia["plantilla_imagen"], carpeta)
+        if not rutas["casillas"]:
+            print("AVISO: no localizo las 4 casillas en la plantilla; el vídeo irá con flashes pero sin resalte.",
+                  file=sys.stderr)
+    else:
+        rutas = plantilla.generar(partidos, foto, carpeta, ruta_arte)
     print(f"Plantilla: {rutas['base']}")
     if args.solo_plantilla:
         return
@@ -117,7 +127,7 @@ def generar(args) -> None:
     if not cues:
         print("AVISO: sin SRT de HeyGen; los subtítulos van con tiempos estimados.", file=sys.stderr)
     ass = str(carpeta / "subtitulos.ass")
-    subs.escribir_ass(palabras, ass)
+    subs.escribir_ass(palabras, ass, y=rutas.get("sub_y"))
     final = montaje.montar(video, rutas, tramos, ass, str(carpeta / "final.mp4"),
                            sonido.clic_camara(str(carpeta / "clic.wav")))
     print(f"LISTO: {final}  ({dur:.1f} s)")

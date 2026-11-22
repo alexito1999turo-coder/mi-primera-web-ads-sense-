@@ -32,14 +32,19 @@ def montar(video_avatar: str, rutas: dict, tramos: list, ass: str, salida: str, 
     """Un flash y un clic de cámara por partido, justo cuando Julen empieza a hablar de él.
     Nunca hay flashes fuera de esos instantes."""
     dur = duracion(video_avatar)
+    av_y, av_h = rutas.get("avatar_y", AVATAR_Y), rutas.get("avatar_h", AVATAR_H)
+    if not rutas.get("resaltes"):
+        tramos_resalte = []          # plantilla externa sin casillas localizadas: solo flashes
+    else:
+        tramos_resalte = tramos
     bucle = ["-loop", "1", "-framerate", "30", "-t", f"{dur:.3f}"]
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", video_avatar, *bucle, "-i", rutas["base"]]
     filtros = [
-        f"[0:v]scale={W}:{AVATAR_H}:force_original_aspect_ratio=increase,crop={W}:{AVATAR_H},setsar=1,fps=30[av]",
-        f"[1:v][av]overlay=0:{AVATAR_Y}[v0]",
+        f"[0:v]scale={W}:{av_h}:force_original_aspect_ratio=increase,crop={W}:{av_h},setsar=1,fps=30[av]",
+        f"[1:v][av]overlay=0:{av_y}[v0]",
     ]
     n, actual = 2, "v0"
-    for idx, ini, fin in tramos:   # resalte del partido del que se está hablando
+    for idx, ini, fin in tramos_resalte:   # resalte del partido del que se está hablando
         cmd += [*bucle, "-i", rutas["resaltes"][idx]]
         filtros.append(f"[{n}:v]format=rgba,fade=t=in:st={ini:.3f}:d=0.10:alpha=1,"
                        f"fade=t=out:st={max(ini, fin - 0.15):.3f}:d=0.15:alpha=1[r{n}]")

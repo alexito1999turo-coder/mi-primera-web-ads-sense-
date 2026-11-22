@@ -21,6 +21,13 @@ Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Jule
 
 Detalles y límites en `tirador/README.md`. Tests: `python -m pytest tests/test_tirador_subs.py`.
 
+### Modo plantilla de ChatGPT (preferencia del usuario desde el 22-11-2026)
+El usuario genera la plantilla entera en ChatGPT (1:1, sin hueco para Julen) y la manda por el chat.
+`"plantilla_imagen": "ruta.png"` en el JSON del día: Julen arriba con su fondo original (1080x796) y la
+plantilla debajo, entera. Antes de gastar créditos, revisa la imagen: nombres letra a letra contra el
+pedido y cada escudo comparado con el oficial; si algo falla, díselo para que la corrija en ChatGPT.
+`casillas.py` localiza las 4 casillas para el resalte; si no las encuentra, el vídeo va solo con flashes.
+
 ### Sistema visual oficial (contexto permanente, no preguntar por el estilo)
 
 «Hazme la plantilla / el vídeo de los partidos de mañana» significa siempre la plantilla oficial:

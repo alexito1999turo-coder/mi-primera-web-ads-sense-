@@ -363,3 +363,58 @@ def generar(partidos: list[tuple], foto_jugador: tuple | None, carpeta: Path, ar
     flash.alpha_composite(zona, (0, ZONA_Y))
     flash.save(rutas["flash"])
     return rutas
+
+
+# ---------------------------------------------------------------------------
+# Modo «plantilla externa»: la parte de abajo es una imagen hecha fuera (ChatGPT).
+# Julen ocupa la franja de arriba con su fondo original, sin margen negro,
+# como en el formato de referencia del nicho (41 % avatar / 59 % plantilla).
+EXT_AVATAR_H = 796                 # 1080x796 arriba
+EXT_SUB_Y = 732                    # subtítulos sobre la parte baja de Julen
+
+
+def desde_imagen(ruta: str, carpeta: Path) -> dict:
+    from . import casillas
+    carpeta.mkdir(parents=True, exist_ok=True)
+    alto = H - EXT_AVATAR_H
+    src = Image.open(ruta).convert("RGB")
+    # se encaja ENTERA (nunca se recorta una casilla); los huecos laterales se rellenan
+    # con la misma imagen ampliada y desenfocada
+    escala = min(W / src.width, alto / src.height)
+    pegada = src.resize((round(src.width * escala), round(src.height * escala)), Image.LANCZOS)
+    zona = ImageOps.fit(src, (W, alto), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
+    zona = ImageEnhance.Brightness(zona).enhance(0.45)
+    zona.paste(pegada, ((W - pegada.width) // 2, alto - pegada.height))
+    base = Image.new("RGB", (W, H), (0, 0, 0))
+    base.paste(zona, (0, EXT_AVATAR_H))
+    rutas = {"base": str(carpeta / "base.png"), "resaltes": [], "flash": str(carpeta / "flash.png"),
+             "avatar_y": 0, "avatar_h": EXT_AVATAR_H, "sub_y": EXT_SUB_Y}
+    base.save(rutas["base"])
+
+    zona_png = carpeta / "zona_plantilla.png"
+    zona.save(zona_png)
+    cajas = casillas.detectar(str(zona_png))
+    if cajas:
+        for i in range(4):
+            capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(capa)
+            for j, (x0, y0, x1, y1) in enumerate(cajas):
+                if j != i:
+                    d.rounded_rectangle((x0, EXT_AVATAR_H + y0, x1, EXT_AVATAR_H + y1), 22, fill=(0, 0, 0, 140))
+            x0, y0, x1, y1 = cajas[i]
+            rect = (x0, EXT_AVATAR_H + y0, x1, EXT_AVATAR_H + y1)
+            capa.alpha_composite(_resplandor((W, H), lambda dd: dd.rounded_rectangle(rect, 22, outline=255, width=12), 14, (255, 255, 255)))
+            ImageDraw.Draw(capa).rounded_rectangle(rect, 22, outline=(255, 255, 255, 235), width=4)
+            r = str(carpeta / f"resalte_{i}.png")
+            capa.save(r)
+            rutas["resaltes"].append(r)
+    rutas["casillas"] = cajas
+
+    grad = ImageChops.invert(Image.radial_gradient("L")).resize((W * 2, alto * 2))
+    grad = grad.crop((W // 2, alto // 2, W // 2 + W, alto // 2 + alto))
+    flash = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    luz = Image.new("RGBA", (W, alto), (255, 250, 235, 0))
+    luz.putalpha(grad.point(lambda v: min(255, int(v * 1.15))))
+    flash.alpha_composite(luz, (0, EXT_AVATAR_H))
+    flash.save(rutas["flash"])
+    return rutas

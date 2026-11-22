@@ -40,6 +40,7 @@ Resultado en `tirador/salida/AAAA-MM-DD/final.mp4`.
 | `foto_secundaria` | no | Segundo PNG del mismo jugador, otro ángulo; se pinta detrás en verde oscuro. Si falta, se usa la principal en espejo |
 | `arte` | no | Imagen cinemática ya hecha del jugador (16:9, sin textos ni escudos). Tiene prioridad sobre las fotos; es la vía que iguala la referencia |
 | `arte_gemini` | no | `true` para generarla por API con Gemini (`arte.py`, **sin probar**: falta clave). Requiere `estrella` y `equipo_estrella` |
+| `plantilla_imagen` | no | Plantilla completa hecha en ChatGPT (cuadrada). Sustituye a la plantilla programática: Julen arriba sin margen, la imagen debajo, resalte si se localizan las casillas |
 | `escudos` | no | `{"Nombre": "ruta.png"}` para forzar un escudo |
 
 Otras opciones: `--video-id ID` reutiliza un vídeo de HeyGen ya pagado; `--avatar-video F.mp4 [--srt F.srt]`
