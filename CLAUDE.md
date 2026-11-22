@@ -21,7 +21,13 @@ Cuando el usuario mande los 4 partidos del día (y, si lo trae, el guion de Jule
 
 Detalles y límites en `tirador/README.md`. Tests: `python -m pytest tests/test_tirador_subs.py`.
 
-### Modo plantilla de ChatGPT (preferencia del usuario desde el 22-11-2026)
+### Modo plantilla maestra (lo que quiere el usuario: diseño fijo, solo cambian escudos, nombres y jugador)
+Una vez: `python -m tirador maestra RUTA.png` con una plantilla de ChatGPT VACÍA (sin jugador, sin nombre
+del jugador, casillas sin escudos ni nombres). Guarda `tirador/maestra/maestra.png` + `maestra.json`
+(casillas, color de acento, zona del jugador y del nombre; ajustable a mano). Cada día: `"maestra": true`
+en el JSON del día; se pintan escudos auténticos, nombres, VS, jugador y su nombre siempre en el mismo sitio.
+
+### Modo plantilla de ChatGPT entera (alternativa manual)
 El usuario genera la plantilla entera en ChatGPT (1:1, sin hueco para Julen) y la manda por el chat.
 `"plantilla_imagen": "ruta.png"` en el JSON del día: Julen arriba con su fondo original (1080x796) y la
 plantilla debajo, entera. Antes de gastar créditos, revisa la imagen: nombres letra a letra contra el

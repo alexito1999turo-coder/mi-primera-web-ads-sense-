@@ -373,18 +373,24 @@ EXT_AVATAR_H = 796                 # 1080x796 arriba
 EXT_SUB_Y = 732                    # subtítulos sobre la parte baja de Julen
 
 
-def desde_imagen(ruta: str, carpeta: Path) -> dict:
-    from . import casillas
-    carpeta.mkdir(parents=True, exist_ok=True)
+def encajar_zona(src: Image.Image) -> Image.Image:
+    """Encaja una plantilla externa ENTERA en la zona inferior (nunca recorta una casilla);
+    los huecos se rellenan con la misma imagen ampliada y desenfocada."""
     alto = H - EXT_AVATAR_H
-    src = Image.open(ruta).convert("RGB")
-    # se encaja ENTERA (nunca se recorta una casilla); los huecos laterales se rellenan
-    # con la misma imagen ampliada y desenfocada
+    src = src.convert("RGB")
     escala = min(W / src.width, alto / src.height)
     pegada = src.resize((round(src.width * escala), round(src.height * escala)), Image.LANCZOS)
     zona = ImageOps.fit(src, (W, alto), Image.LANCZOS).filter(ImageFilter.GaussianBlur(28))
     zona = ImageEnhance.Brightness(zona).enhance(0.45)
     zona.paste(pegada, ((W - pegada.width) // 2, alto - pegada.height))
+    return zona
+
+
+def desde_imagen(ruta: str, carpeta: Path, cajas_conocidas: list | None = None) -> dict:
+    from . import casillas
+    carpeta.mkdir(parents=True, exist_ok=True)
+    alto = H - EXT_AVATAR_H
+    zona = encajar_zona(Image.open(ruta))
     base = Image.new("RGB", (W, H), (0, 0, 0))
     base.paste(zona, (0, EXT_AVATAR_H))
     rutas = {"base": str(carpeta / "base.png"), "resaltes": [], "flash": str(carpeta / "flash.png"),
@@ -393,7 +399,7 @@ def desde_imagen(ruta: str, carpeta: Path) -> dict:
 
     zona_png = carpeta / "zona_plantilla.png"
     zona.save(zona_png)
-    cajas = casillas.detectar(str(zona_png))
+    cajas = cajas_conocidas or casillas.detectar(str(zona_png))
     if cajas:
         for i in range(4):
             capa = Image.new("RGBA", (W, H), (0, 0, 0, 0))

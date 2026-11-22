@@ -15,7 +15,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import arte, datos, heygen, montaje, partidos as partidos_mod, plantilla, sonido, subs
+from . import arte, datos, maestra as maestra_mod, heygen, montaje, partidos as partidos_mod, plantilla, sonido, subs
 from .equipos import Equipo, normalizar, resolver
 
 RAIZ = Path(__file__).resolve().parent
@@ -58,7 +58,7 @@ def generar(args) -> None:
 
     manuales = {normalizar(k): v for k, v in (dia.get("escudos") or {}).items()}
     def equipo(nombre: str) -> Equipo:
-        if dia.get("plantilla_imagen"):          # los escudos ya vienen pintados en la imagen
+        if dia.get("plantilla_imagen") and not dia.get("maestra"):   # escudos ya pintados en la imagen
             return Equipo(nombre, False, "", nombre)
         if normalizar(nombre) in manuales:
             return Equipo(nombre, False, manuales[normalizar(nombre)], nombre)
@@ -80,7 +80,9 @@ def generar(args) -> None:
     else:
         estrella, foto = _elegir_estrella(dia, [e for p in partidos for e in p])
     print(f"Jugador estrella: {estrella}")
-    if dia.get("plantilla_imagen"):
+    if dia.get("maestra"):
+        rutas = maestra_mod.componer(partidos, foto, carpeta, estrella)
+    elif dia.get("plantilla_imagen"):
         rutas = plantilla.desde_imagen(dia["plantilla_imagen"], carpeta)
         if not rutas["casillas"]:
             print("AVISO: no localizo las 4 casillas en la plantilla; el vídeo irá con flashes pero sin resalte.",
@@ -142,6 +144,9 @@ def main() -> None:
     ap.add_argument("--avatar-video")
     ap.add_argument("--srt")
     args = ap.parse_args()
+    if args.dia == "maestra":
+        maestra_mod.preparar(args.fecha or sys.exit("Uso: python -m tirador maestra RUTA.png"))
+        return
     if args.dia == "partidos":
         from datetime import date
         partidos_mod.proponer(date.fromisoformat(args.fecha) if args.fecha else date.today(), RAIZ / "dias")
